@@ -1,0 +1,10 @@
+<?php
+
+return [
+    App\Providers\AppServiceProvider::class,
+    App\Providers\Filament\AdminPanelProvider::class,
+    App\Providers\Filament\EditorPanelProvider::class,
+    App\Providers\Filament\FinancePanelProvider::class,
+    App\Providers\Filament\ModeratorPanelProvider::class,
+    App\Providers\Filament\SuperAdminPanelProvider::class,
+];
