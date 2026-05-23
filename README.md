@@ -2,6 +2,8 @@
 
 Platform web novel modern yang mendukung ekosistem penulis dan pembaca dengan sistem monetisasi berbasis koin, manajemen kontrak eksklusif/non-eksklusif, dan kurasi konten berbasis komunitas.
 
+**Dokumentasi Lengkap:** Lihat folder [docs/](./app/docs) untuk dokumentasi arsitektur, database, dan workflow.
+
 [![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=flat-square&logo=laravel)](https://laravel.com)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat-square&logo=php)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
@@ -15,10 +17,19 @@ Platform web novel modern yang mendukung ekosistem penulis dan pembaca dengan si
 - [Konfigurasi](#-konfigurasi)
 - [Penggunaan](#-penggunaan)
 - [Dokumentasi](#-dokumentasi)
+- [RBAC & Wewenang](#-matriks-wewenang-rbac-matrix)
 - [Struktur Proyek](#-struktur-proyek)
 - [Kontribusi](#-kontribusi)
 - [Lisensi](#-lisensi)
 - [Kontak](#-kontak)
+
+### 🎯 Tautan Cepat Dokumentasi
+
+Akses dokumentasi teknis dengan cepat:
+
+- 📊 **Database:** [ERD](./app/docs/database/erd.md) | [Data Dictionary](./app/docs/database/data-dictionary.md)
+- 🔧 **Architecture:** [Contract Workflow](./app/docs/architecture/contract-workflow.md) | [Moderation Workflow](./app/docs/architecture/moderation-workflow.md)
+- 🔐 **Security:** [RBAC Matrix](./app/docs/security/rbac-matrix.md)
 
 ---
 
@@ -34,17 +45,31 @@ Sistem _Role-Based Access Control_ yang ketat dengan 5 divisi terpisah:
 - **Editor:** Kurasi naskah, supervisi novel binaan, dan validasi bab.
 - **Moderator:** Moderasi komentar dan pelaporan ulasan komunitas.
 
+📖 **Lihat:** [RBAC Matrix Documentation](./app/docs/security/rbac-matrix.md)
+
 ### 2. Finansial & Monetisasi
 
 - **Wallet System:** Pemisahan _source of truth_ antara saldo koin dan pendapatan rupiah penulis untuk mencegah _double-spending_.
 - **Progressive Onboarding:** Alur kontrak yang dinamis (Eksklusif vs Non-Eksklusif) dengan sistem verifikasi data (KYC) yang progresif.
 - **Automatic Ledger:** Perhitungan otomatis bagi hasil penulis dan platform yang langsung terekam saat bab dibeli.
 
-### 3. Arsitektur Scalable
+📖 **Lihat:** [Contract Workflow Architecture](./app/docs/architecture/contract-workflow.md)
+
+### 3. Sistem Moderasi Bertingkat
+
+- **Two-Level Moderation:** Moderator menangani kasus ringan, Admin menangani eskalasi dan pemblokiran.
+- **Community Reporting:** Pembaca dapat melaporkan konten toksik dengan sistem tiket tracking.
+- **Soft Delete & Audit Trail:** Semua tindakan moderasi tercatat untuk compliance dan recovery.
+
+📖 **Lihat:** [Moderation Workflow Architecture](./app/docs/architecture/moderation-workflow.md)
+
+### 4. Arsitektur Scalable
 
 - **ULID:** Penggunaan _Universally Unique Lexicographically Sortable Identifier_ pada tabel transaksional untuk memastikan performa database tetap optimal meskipun data mencapai jutaan baris.
 - **Eager Loading:** Optimasi query untuk memusnahkan _N+1 Query Problem_ pada seluruh modul Filament.
 - **Event-Driven:** Otomatisasi pembuatan dompet digital (Wallet) via _Observers_ dan _Queue Jobs_ untuk tugas latar belakang.
+
+📖 **Lihat:** [Data Dictionary & Architecture Decisions](./app/docs/database/data-dictionary.md), [Entity Relationship Diagram](./app/docs/database/erd.md)
 
 ---
 
@@ -177,13 +202,39 @@ php artisan test --filter=NamaTest
 
 ## 📚 Dokumentasi
 
-Untuk detail teknis lebih lanjut, silakan merujuk ke folder [`docs/`](./app/docs/):
+Untuk detail teknis lengkap tentang arsitektur sistem, alur kerja bisnis, dan struktur database, silakan merujuk ke dokumentasi yang tersedia:
 
-| Dokumentasi                                           | Deskripsi                                  |
-| ----------------------------------------------------- | ------------------------------------------ |
-| [Database Architecture](./app/docs/database/)         | Skema relasi tabel dan ERD                 |
-| [Business Workflows](./app/docs/business-workflows/)  | Alur _Progressive KYC_ dan _Revenue Logic_ |
-| [Security & RBAC](./app/docs/security/rbac-matrix.md) | Matriks wewenang akses tiap divisi         |
+### Arsitektur & Alur Kerja Bisnis
+
+| Dokumentasi                                                           | Deskripsi                                                   |
+| --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [Contract Workflow](./app/docs/architecture/contract-workflow.md)     | Alur kerja pengajuan dan validasi kontrak (Progressive KYC) |
+| [Moderation Workflow](./app/docs/architecture/moderation-workflow.md) | Sistem moderasi & eskalasi kedisiplinan pengguna            |
+| [Security & RBAC](./app/docs/security/rbac-matrix.md)                 | Matriks wewenang akses tiap divisi                          |
+
+### Struktur Database
+
+| Dokumentasi                                               | Deskripsi                                         |
+| --------------------------------------------------------- | ------------------------------------------------- |
+| [Entity Relationship Diagram](./app/docs/database/erd.md) | Visualisasi hubungan entitas database             |
+| [Data Dictionary](./app/docs/database/data-dictionary.md) | Penjelasan tipe data & keputusan arsitektur       |
+| [Database Architecture](./app/docs/database/)             | Dokumentasi lengkap skema dan optimisasi database |
+
+### Navigasi Dokumentasi
+
+```
+docs/
+├── architecture/
+│   ├── contract-workflow.md          # Alur kontrak eksklusif & non-eksklusif
+│   ├── moderation-workflow.md        # Sistem moderasi bertingkat
+│   └── ...
+├── database/
+│   ├── erd.md                        # Entity Relationship Diagram
+│   ├── data-dictionary.md            # Kamus data & keputusan arsitektur
+│   └── ...
+└── security/
+    └── rbac-matrix.md                # Matriks Role-Based Access Control
+```
 
 ---
 
@@ -226,7 +277,11 @@ Ringkasan akses berdasarkan role untuk setiap divisi:
 | **Review Naskah**     | ❌          | ❌               | ❌      | ✅     | ❌                |
 | **Laporan Komunitas** | ✅          | ✅               | ❌      | ❌     | ✅                |
 
-Untuk detail lengkap, lihat [RBAC Matrix Documentation](./app/docs/security/rbac-matrix.md).
+📖 **Lihat Detail Lengkap:**
+
+- [RBAC Matrix Documentation](./app/docs/security/rbac-matrix.md) - Matriks wewenang detail
+- [Moderation Workflow](./app/docs/architecture/moderation-workflow.md) - Alur moderasi & eskalasi
+- [Contract Workflow](./app/docs/architecture/contract-workflow.md) - Alur validasi kontrak
 
 ---
 
