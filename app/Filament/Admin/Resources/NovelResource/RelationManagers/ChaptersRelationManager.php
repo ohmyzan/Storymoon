@@ -8,7 +8,9 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model; // Wajib ditambahkan
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+
 
 class ChaptersRelationManager extends RelationManager
 {
@@ -84,18 +86,64 @@ class ChaptersRelationManager extends RelationManager
             ->headerActions([
                 Tables\Actions\CreateAction::make()
                     ->mutateFormDataUsing(function (array $data): array {
-                        // Fitur Otomatisasi: Hitung jumlah kata dari isi cerita (buang tag HTML-nya)
                         $data['word_count'] = str_word_count(strip_tags($data['content']));
+
+                        // 🌟 FIX: Tangkap status default untuk create, tapi keluarkan dari array $data
+                        $data['temp_status'] = 'published'; // Asumsi admin create langsung terbit
+
                         return $data;
+                    })
+                    // 🌟 FIX: Bypass $fillable untuk proses Create
+                    ->using(function (array $data, string $model): Model {
+                        $status = $data['temp_status'] ?? 'published';
+                        unset($data['temp_status']);
+
+                        $record = new $model($data);
+                        $record->novel_id = $this->getOwnerRecord()->id; // Wajib kaitkan ke novel
+                        $record->status = $status;
+
+                        // Set tanggal terbit
+                        if ($status === 'published') {
+                            $record->published_at = now();
+                        }
+
+                        $record->save();
+                        return $record;
                     }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->mutateFormDataUsing(function (array $data): array {
-                        // Fitur Otomatisasi: Update hitungan jumlah kata saat diedit
                         $data['word_count'] = str_word_count(strip_tags($data['content']));
+
+                        // Jika form Edit Admin memiliki dropdown status, kita amankan nilainya
+                        if (isset($data['status'])) {
+                            $data['temp_status'] = $data['status'];
+                            unset($data['status']);
+                        }
+
                         return $data;
+                    })
+                    // 🌟 FIX: Bypass $fillable untuk proses Edit Admin
+                    ->using(function (Model $record, array $data): Model {
+                        $newStatus = $data['temp_status'] ?? null;
+                        unset($data['temp_status']);
+
+                        $record->fill($data);
+
+                        if ($newStatus) {
+                            $record->status = $newStatus;
+
+                            // Logika tanggal terbit
+                            if ($newStatus === 'published' && $record->published_at === null) {
+                                $record->published_at = now();
+                            }
+                        }
+
+                        $record->save();
+                        return $record;
                     }),
+
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\RestoreAction::make(),
             ])

@@ -37,10 +37,13 @@ class UserResource extends Resource
                     ->schema([
                         Forms\Components\DateTimePicker::make('muted_until')
                             ->label('Dilarang Komentar (Mute) Sampai')
-                            ->helperText('Kosongkan jika tidak ingin di-mute.'),
+                            ->helperText('Kosongkan jika tidak ingin di-mute.')
+                            ->dehydrated(false), // 🌟 FIX CLAUDE: Keluarkan dari mass-assignment
+
                         Forms\Components\DateTimePicker::make('suspended_until')
                             ->label('Tangguhkan Akses (Suspend) Sampai')
-                            ->helperText('Pengguna tidak bisa mengakses web sementara.'),
+                            ->helperText('Pengguna tidak bisa mengakses web sementara.')
+                            ->dehydrated(false), // 🌟 FIX CLAUDE: Keluarkan dari mass-assignment
                     ])->columns(2),
             ]);
     }
@@ -55,7 +58,6 @@ class UserResource extends Resource
                     ->label('Role')
                     ->colors(['primary']),
 
-                // Indikator Hukuman Aktif
                 Tables\Columns\IconColumn::make('is_muted')
                     ->label('Muted')
                     ->boolean()
@@ -72,7 +74,6 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // Filter untuk mencari siapa saja yang sedang dihukum
                 Tables\Filters\Filter::make('currently_suspended')
                     ->label('Sedang Disuspensi')
                     ->query(fn(Builder $query): Builder => $query->where('suspended_until', '>', now())),
@@ -83,12 +84,10 @@ class UserResource extends Resource
             ->bulkActions([]);
     }
 
-    // 🔒 PENTING: Moderator HANYA BOLEH melihat/mengelola user dengan role 'Author' dan 'Reader'
-    // Mereka TIDAK BOLEH mengelola Admin, Editor, atau sesama Moderator.
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with('roles') // 🌟 Tarik peran (Role) sekaligus!
+            ->with('roles')
             ->role(['Author', 'Reader']);
     }
 
@@ -96,7 +95,6 @@ class UserResource extends Resource
     {
         return [
             'index' => Pages\ListUsers::route('/'),
-            // Kita matikan tombol Create karena user baru hanya dari pendaftaran
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }

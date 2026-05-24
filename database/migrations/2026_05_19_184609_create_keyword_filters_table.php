@@ -10,10 +10,22 @@ return new class extends Migration
     {
         Schema::create('keyword_filters', function (Blueprint $table) {
             $table->id();
+
             $table->string('keyword')->unique();
             $table->string('replacement')->default('***');
+
+            // [FIX] Tambah severity untuk moderasi yang lebih granular
+            // low = sensor saja, medium = sensor + log, high = sensor + notif moderator
+            $table->enum('severity', ['low', 'medium', 'high'])->default('medium');
+
             $table->boolean('is_active')->default(true);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->timestamps();
         });
     }

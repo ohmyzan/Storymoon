@@ -3,34 +3,45 @@
 namespace App\Filament\Finance\Resources\TopUpResource\Pages;
 
 use App\Filament\Finance\Resources\TopUpResource;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model; // Tambahkan ini
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class EditTopUp extends EditRecord
 {
     protected static string $resource = TopUpResource::class;
 
-    protected function beforeSave(): void
+    public ?string $newStatus = null;
+
+    protected function mutateFormDataBeforeSave(array $data): array
     {
-        $oldStatus = $this->record->getOriginal('status');
-        $newStatus = $this->data['status'];
+        $this->newStatus = $data['status'] ?? null;
+        return $data;
+    }
 
-        // Cek transisi: Jika status SEBELUMNYA BUKAN success dan DIUBAH MENJADI success
-        if ($oldStatus !== 'success' && $newStatus === 'success') {
+    // 🌟 FIX: Gunakan handleRecordUpdate
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        $oldStatus = $record->status;
 
-            // 🌟 BUNGKUS DENGAN DB::transaction (Keamanan Finansial Mutlak)
-            DB::transaction(function () {
-                $user = $this->record->user;
+        // Validasi Ketat: Hanya proses jika sebelumnya BUKAN success
+        if ($oldStatus !== 'success' && $this->newStatus === 'success') {
+            DB::transaction(function () use ($record) {
+                // 1. Tambah saldo pembaca
+                $record->user->wallet->increment('coin_balance', $record->coins_granted);
 
-                // 🌟 PERBAIKAN: Arahkan ke relasi dompet (Wallet)
-                $user->wallet->increment('coin_balance', $this->record->coins_granted);
-
-                // Catat waktu sukses transaksi
-                $this->record->settled_at = now();
-
-                // Opsional tingkat lanjut: Anda bisa meng-create data ke tabel 'transactions' di sini
+                // 2. Panggil method Model (Gunakan array kosong karena ini verifikasi manual Admin, bukan dari Midtrans)
+                $record->markAsSuccess([
+                    'manual_verification_by_admin' => Auth::user()?->id
+                ]);
             });
+        } elseif ($oldStatus !== 'failed' && $this->newStatus === 'failed') {
+            $record->markAsFailed(['reason' => 'Manually failed by admin']);
+        } elseif ($oldStatus !== 'expired' && $this->newStatus === 'expired') {
+            $record->markAsExpired();
         }
+
+        return $record;
     }
 }

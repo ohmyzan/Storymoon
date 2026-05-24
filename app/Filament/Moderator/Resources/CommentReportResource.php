@@ -10,6 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Forms\Get; // Tambahkan jika belum ada
 
 class CommentReportResource extends Resource
 {
@@ -32,10 +33,11 @@ class CommentReportResource extends Resource
                             ->content(fn(CommentReport $record): string => $record->comment->content ?? 'Komentar tidak ditemukan.')
                             ->disabled()
                             ->columnSpanFull(),
+                        // 🌟 FIX DARI CLAUDE: Gunakan state() untuk virtual field read-only, bukan default()
                         Forms\Components\Toggle::make('comment_hidden_status')
                             ->label('Status Disembunyikan (Saat Ini)')
                             ->disabled()
-                            ->default(fn(CommentReport $record): bool => $record->comment->is_hidden ?? false),
+                            ->state(fn(CommentReport $record): bool => $record->comment?->is_hidden ?? false),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Informasi Pelapor')
@@ -54,6 +56,7 @@ class CommentReportResource extends Resource
 
                 Forms\Components\Section::make('Tindakan Moderator')
                     ->schema([
+                        // 🌟 FIX: Cegah status masuk ke array save
                         Forms\Components\Select::make('status')
                             ->options([
                                 'pending' => 'Menunggu Keputusan',
@@ -62,13 +65,16 @@ class CommentReportResource extends Resource
                                 'escalated' => '🔥 Eskalasi ke Admin (Perlu Banned Akun)',
                             ])
                             ->required()
-                            ->label('Keputusan (Status)'),
+                            ->label('Keputusan (Status)')
+                            ->dehydrated(false), // Cegah mass assignment
 
+                        // 🌟 FIX: Cegah moderator_notes masuk ke array save
                         Forms\Components\Textarea::make('moderator_notes')
                             ->label('Catatan Moderator')
                             ->placeholder('Tulis alasan tindakan Anda di sini...')
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->dehydrated(false), // Cegah mass assignment
                     ])->color('danger'),
             ]);
     }

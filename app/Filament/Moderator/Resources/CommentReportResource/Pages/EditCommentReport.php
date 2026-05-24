@@ -4,32 +4,41 @@ namespace App\Filament\Moderator\Resources\CommentReportResource\Pages;
 
 use App\Filament\Moderator\Resources\CommentReportResource;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model; // Tambahkan ini
 
 class EditCommentReport extends EditRecord
 {
     protected static string $resource = CommentReportResource::class;
 
+    public ?string $newStatus = null;
+    public ?string $moderatorNotes = null;
+
+    // Tangkap input dari form sebelum dibuang karena dehydrated(false)
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // Catat siapa Moderator yang mengeksekusi
-        $data['handled_by'] = Auth::id();
+        $this->newStatus = $data['status'] ?? null;
+        $this->moderatorNotes = $data['moderator_notes'] ?? null;
         return $data;
     }
 
-    protected function afterSave(): void
+    // 🌟 FIX DARI CLAUDE: Eksekusi eksplisit memanggil method Model
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        // Ambil komentar terkait
-        $comment = $this->record->comment;
+        $user = auth()->user();
 
-        // Jika laporan divalidasi (Resolved) -> Otomatis Sembunyikan Komentar (is_hidden = true)
-        if ($this->record->status === 'resolved' && $comment) {
-            $comment->update(['is_hidden' => true]);
-        }
+        if ($this->newStatus) {
+            match ($this->newStatus) {
+                'resolved'  => $record->resolve($user, $this->moderatorNotes),
+                'rejected'  => $record->reject($user, $this->moderatorNotes),
+                'escalated' => $record->escalate($user, $this->moderatorNotes),
+                default     => null,
+            };
 
-        // Jika laporan ditolak (Rejected) -> Pastikan komentar tetap muncul (is_hidden = false)
-        if ($this->record->status === 'rejected' && $comment) {
-            $comment->update(['is_hidden' => false]);
+            // Logika sembunyikan komentar ditaruh di sini
+            if ($this->newStatus === 'resolved' && $record->comment) {
+                $record->comment->update(['is_hidden' => true]);
+            }
         }
+        return $record;
     }
 }

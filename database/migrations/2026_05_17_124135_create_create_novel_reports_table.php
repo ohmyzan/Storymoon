@@ -11,19 +11,34 @@ return new class extends Migration
         Schema::create('novel_reports', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            // Relasi
-            $table->foreignId('reporter_id')->constrained('users')->cascadeOnDelete(); // Pembaca yang melapor
-            $table->foreignUlid('novel_id')->constrained('novels')->cascadeOnDelete(); // Novel yang dilaporkan
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('reporter_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
 
-            // Detail Laporan
+            $table->foreignUlid('novel_id')
+                ->constrained('novels')
+                ->cascadeOnDelete();
+
             $table->enum('category', ['plagiarism', 'inappropriate_content', 'spam', 'other']);
             $table->text('description');
-            $table->string('proof_image')->nullable(); // Screenshot bukti dari pelapor
+            $table->string('proof_image')->nullable();
 
-            // Status & Resolusi (Workflow Editor)
-            $table->enum('status', ['pending', 'reviewed', 'resolved', 'rejected', 'escalated'])->default('pending')->index();
-            $table->text('editor_notes')->nullable(); // Catatan tindakan Editor
-            $table->foreignId('handled_by')->nullable()->constrained('users'); // Editor/Admin yang menangani
+            $table->enum('status', ['pending', 'reviewed', 'resolved', 'rejected', 'escalated'])
+                ->default('pending')
+                ->index();
+
+            $table->text('editor_notes')->nullable();
+
+            // [FIX] Tambah nullOnDelete agar tidak error jika moderator dihapus
+            $table->foreignUlid('handled_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            // [FIX] Unique constraint: satu user hanya bisa buat 1 laporan aktif per novel
+            // Mencegah spam laporan dari user yang sama
+            $table->unique(['reporter_id', 'novel_id'], 'unique_report_per_user_novel');
 
             $table->softDeletes();
             $table->timestamps();

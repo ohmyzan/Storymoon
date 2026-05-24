@@ -11,47 +11,60 @@ return new class extends Migration
         Schema::create('contracts', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            // Relasi Inti
-            $table->foreignUlid('novel_id')->constrained('novels')->cascadeOnDelete();
-            $table->foreignId('author_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('editor_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUlid('novel_id')
+                ->constrained('novels')
+                ->cascadeOnDelete();
 
-            // Detail Bisnis (Eksklusif / Non-Eksklusif)
+            $table->foreignUlid('author_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
+
+            $table->foreignUlid('editor_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->enum('contract_type', ['exclusive', 'non_exclusive']);
-            $table->integer('revenue_share_author');   // Misal: 70
-            $table->integer('revenue_share_platform'); // Misal: 30
 
-            // Data Hukum & Finansial (KYC)
+            $table->unsignedTinyInteger('revenue_share_author');
+            $table->unsignedTinyInteger('revenue_share_platform');
+
+            // KYC
             $table->string('real_name');
-            $table->string('id_card_number'); // NIK KTP
-            $table->string('id_card_image');  // Bukti KTP
+            $table->string('id_card_number');
+            $table->string('id_card_image');
             $table->string('selfie_image')->nullable();
             $table->string('bank_name');
             $table->string('bank_account_number');
             $table->string('bank_account_name');
-            $table->string('external_links')->nullable(); // Bukti link dihapus dari platform lain
+            $table->string('external_links')->nullable();
 
-            // 🌟 LEGALITAS & TANDA TANGAN (Sesuai ide Anda!)
-            $table->text('signature_image'); // Menyimpan base64/path gambar coretan tanda tangan
-            $table->string('contract_document_path')->nullable(); // Nanti sistem akan meng-generate PDF sahnya ke sini
+            $table->string('signature_image_path')->nullable();
+            $table->string('contract_document_path')->nullable();
 
-            // Status Persetujuan Editor
             $table->enum('status', [
-                'text_review',     // Tahap 1: Editor baca naskah
-                'kyc_submission',  // Tahap 2: Minta penulis isi KTP/Rekening (Khusus Eksklusif)
-                'kyc_review',      // Tahap 3: Admin Finance cek dokumen
-                'signing',         // Tahap 4: Tunggu Tanda Tangan & OTP
-                'active',          // Tahap 5: Kontrak Sah!
-                'rejected'         // Ditolak
+                'text_review',
+                'kyc_submission',
+                'kyc_review',
+                'signing',
+                'active',
+                'rejected',
             ])->default('text_review')->index();
-            $table->text('editor_notes')->nullable(); // Alasan revisi/tolak
 
-            $table->timestamp('signed_at')->nullable(); // Tanggal sah disetujui
+            // ✅ FIX UTAMA: kontrol kontrak aktif
+            $table->boolean('is_active')->default(false);
+
+            $table->text('editor_notes')->nullable();
+            $table->timestamp('signed_at')->nullable();
+
             $table->softDeletes();
             $table->timestamps();
 
-            // Mencegah 1 novel mengajukan lebih dari 1 kontrak aktif secara bersamaan
-            $table->unique(['novel_id', 'status'], 'unique_active_contract');
+            // Index performa
+            $table->index(['novel_id', 'status']);
+
+            // ✅ ENFORCEMENT: hanya 1 kontrak aktif per novel
+            $table->unique(['novel_id', 'is_active']);
         });
     }
 

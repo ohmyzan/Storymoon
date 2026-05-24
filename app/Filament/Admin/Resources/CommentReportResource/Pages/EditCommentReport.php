@@ -16,20 +16,21 @@ class EditCommentReport extends EditRecord
         if (isset($data['ban_user']) && $data['ban_user'] === true) {
             $this->shouldBanUser = true;
         }
-
         return $data;
     }
 
     protected function afterSave(): void
     {
-        if ($this->shouldBanUser) {
-            $comment = $this->record->comment;
+        $comment = $this->record->comment;
 
-            if ($comment && $comment->user) {
-                // 🌟 Menggunakan banned_at yang sudah sah!
-                $comment->user->update(['banned_at' => now()]);
-                $comment->update(['is_hidden' => true]);
-            }
+        if ($this->shouldBanUser && $comment && $comment->user) {
+            // [FIX] Menggunakan method ban() bawaan model User sesuai audit
+            $comment->user->ban();
+        }
+
+        // Jika kasus diselesaikan, sembunyikan komentar otomatis
+        if ($this->record->status === 'resolved' && $comment) {
+            $comment->update(['is_hidden' => true]);
         }
     }
 }

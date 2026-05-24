@@ -11,24 +11,42 @@ return new class extends Migration
         Schema::create('chapter_purchases', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            // Relasi Aktor & Konten
-            $table->foreignId('reader_id')->constrained('users')->restrictOnDelete(); // Siapa yang beli
-            $table->foreignUlid('chapter_id')->constrained('chapters')->restrictOnDelete(); // Bab apa yang dibeli
-            $table->foreignId('author_id')->constrained('users')->cascadeOnDelete(); // Ditargetkan langsung ke Author agar query Finance nanti super cepat
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('reader_id')
+                ->constrained('users')
+                ->restrictOnDelete();
 
-            // Logika Pembagian Ledger (Sesuai kesepakatan Opsi B)
-            $table->integer('price_coined'); // Harga total bab saat dibeli (misal: 10 koin)
-            $table->integer('author_earning'); // Porsi untuk penulis (misal: 7 atau 5 koin)
-            $table->integer('platform_earning'); // Porsi untuk platform (misal: 3 atau 5 koin)
+            $table->foreignUlid('chapter_id')
+                ->constrained('chapters')
+                ->restrictOnDelete();
 
-            // Snapshot Kontrak saat kejadian (untuk audit log hukum)
+            $table->foreignUlid('novel_id')
+                ->constrained('novels')
+                ->restrictOnDelete();
+
+            $table->foreignUlid('author_id')
+                ->constrained('users')
+                ->restrictOnDelete();
+
+            // [FIX] Unique constraint mencegah double-purchase akibat race condition
+            $table->unique(['reader_id', 'chapter_id'], 'unique_purchase_per_reader_chapter');
+
+            // [FIX] Rename price_coined → coin_price agar konsisten dengan chapters.coin_price
+            $table->unsignedInteger('coin_price');
+            $table->unsignedInteger('author_earning');
+            $table->unsignedInteger('platform_earning');
+
+            // Snapshot kontrak saat transaksi terjadi (audit log hukum)
             $table->enum('contract_type_snapshot', ['exclusive', 'non_exclusive']);
-            $table->integer('revenue_share_snapshot'); // Menyimpan angka 70 atau 50
+            $table->unsignedTinyInteger('revenue_share_snapshot');
 
-            $table->timestamps(); // Berguna sebagai tanggal pembukuan keuangan
+            $table->timestamps();
 
-            // Indeks untuk optimasi performa query laporan bulanan finance
+            // Index untuk laporan keuangan bulanan per author
             $table->index(['author_id', 'created_at']);
+
+            // [FIX] Index tambahan untuk query "berapa pembeli chapter X"
+            $table->index('chapter_id');
         });
     }
 

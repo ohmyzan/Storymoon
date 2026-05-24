@@ -64,7 +64,8 @@ class PayoutStatementResource extends Resource
                                 'credited_to_wallet' => 'Telah Disuntikkan ke Dompet Penulis',
                             ])
                             ->required()
-                            ->label('Status Slip Pendapatan'),
+                            ->label('Status Slip Pendapatan')
+                            ->dehydrated(false), // 🌟 FIX: Jangan masukkan ke array penyimpanan default
                     ]),
             ]);
     }

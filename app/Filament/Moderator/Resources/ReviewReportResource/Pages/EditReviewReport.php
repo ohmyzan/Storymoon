@@ -4,27 +4,45 @@ namespace App\Filament\Moderator\Resources\ReviewReportResource\Pages;
 
 use App\Filament\Moderator\Resources\ReviewReportResource;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model; // Tambahkan ini
 
 class EditReviewReport extends EditRecord
 {
     protected static string $resource = ReviewReportResource::class;
 
+    public ?string $newStatus = null;
+    public ?string $moderatorNotes = null;
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $data['handled_by'] = Auth::id();
+        $this->newStatus = $data['status'] ?? null;
+        $this->moderatorNotes = $data['moderator_notes'] ?? null;
         return $data;
     }
 
-    protected function afterSave(): void
+    // 🌟 FIX DARI CLAUDE: Eksekusi fungsi Model
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        $review = $this->record->review;
+        $user = auth()->user();
 
-        // Jika terbukti melanggar (Resolved), hapus ulasannya!
-        if ($this->record->status === 'resolved' && $review) {
-            // Jika tabel reviews Anda punya softDeletes, ini akan me-nonaktifkannya dengan aman
-            // Jika tidak, ini akan menghapusnya secara permanen.
-            $review->delete();
+        if ($this->newStatus) {
+            match ($this->newStatus) {
+                'resolved'  => $record->resolve($user, $this->moderatorNotes),
+                'rejected'  => $record->reject($user, $this->moderatorNotes),
+                // Asumsi method escalate() ada di Model ReviewReport. Jika tidak ada, gunakan update biasa:
+                'escalated' => tap($record)->update([
+                    'status' => 'escalated',
+                    'handled_by' => $user->id,
+                    'moderator_notes' => $this->moderatorNotes
+                ]),
+                default     => null,
+            };
+
+            // Hapus ulasan jika terbukti melanggar
+            if ($this->newStatus === 'resolved' && $record->review) {
+                $record->review->delete();
+            }
         }
+        return $record;
     }
 }

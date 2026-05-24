@@ -11,6 +11,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // Tambahkan ini!
+use Filament\Notifications\Notification; // Tambahkan ini!  
 
 class TextReviewResource extends Resource
 {
@@ -44,17 +46,18 @@ class TextReviewResource extends Resource
                         ->label('📖 Baca 10 Bab Pertama')
                         ->color('info')
                         ->modalHeading(fn(Contract $record) => 'Pratinjau Naskah: ' . $record->novel->title)
-                        ->modalWidth('7xl') // Ukuran modal layar penuh agar nyaman dibaca
+                        ->modalWidth('7xl')
+                        // 🌟 FIX RAM OOM: Gunakan chapters()->take(10)->get() BUKAN chapters->take(10)
                         ->modalContent(fn(Contract $record) => new \Illuminate\Support\HtmlString(
                             '<div class="p-6 bg-white dark:bg-gray-900 rounded-lg max-h-[70vh] overflow-y-auto prose dark:prose-invert max-w-none">' .
-                                $record->novel->chapters->take(10)->map(function ($chapter) {
+                                $record->novel->chapters()->take(10)->get()->map(function ($chapter) {
                                     return "<h2 class='text-2xl font-bold mb-4 mt-8'>{$chapter->chapter_number}. {$chapter->title}</h2>" .
                                         "<div class='text-gray-700 dark:text-gray-300 leading-relaxed'>" . $chapter->content . "</div>" .
                                         "<hr class='my-8 border-gray-300 dark:border-gray-700'>";
                                 })->implode('') .
                                 '</div>'
                         ))
-                        ->modalSubmitAction(false) // Sembunyikan tombol submit di modal
+                        ->modalSubmitAction(false)
                         ->modalCancelActionLabel('Tutup Naskah'),
                 ])->columnSpanFull(),
 
@@ -94,7 +97,7 @@ class TextReviewResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')->dateTime('d M Y')->label('Tanggal Pengajuan'),
             ])
             ->actions([
-                // TOMBOL 1: KLAIM (Hanya muncul jika naskah belum ada yang punya)
+                // 🌟 FIX RACE CONDITION: Menggunakan Transaction Lock!
                 Tables\Actions\Action::make('claim_task')
                     ->label('Klaim Naskah')
                     ->icon('heroicon-o-hand-raised')
@@ -103,9 +106,24 @@ class TextReviewResource extends Resource
                     ->modalHeading('Ambil Alih Evaluasi Naskah?')
                     ->modalDescription('Setelah diklaim, Editor lain tidak akan bisa melihat atau mengevaluasi naskah ini.')
                     ->visible(fn(Contract $record) => is_null($record->editor_id))
-                    ->action(fn(Contract $record) => $record->update(['editor_id' => Auth::id()])),
+                    ->action(function (Contract $record) {
+                        try {
+                            DB::transaction(function () use ($record) {
+                                // Kunci row di DB agar tidak diembat editor lain di detik yang sama
+                                $fresh = Contract::lockForUpdate()->find($record->id);
 
-                // TOMBOL 2: EVALUASI (Hanya muncul jika naskah ini sudah saya klaim)
+                                if ($fresh->editor_id !== null) {
+                                    throw new \Exception('Naskah sudah diklaim editor lain.');
+                                }
+
+                                $fresh->update(['editor_id' => Auth::id()]);
+                            });
+                            Notification::make()->title('Sukses diklaim!')->success()->send();
+                        } catch (\Exception $e) {
+                            Notification::make()->title('Gagal Klaim')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
+
                 Tables\Actions\EditAction::make()
                     ->label('Evaluasi Naskah')
                     ->visible(fn(Contract $record) => $record->editor_id === Auth::id()),

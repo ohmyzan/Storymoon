@@ -9,7 +9,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -22,28 +21,9 @@ class EditorChoiceResource extends Resource
 
     public static function form(Form $form): Form
     {
-        // Admin hanya membaca alasan dari editor, tidak membuat dari nol
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Detail Pengajuan')
-                    ->schema([
-                        Forms\Components\Placeholder::make('novel_title')
-                            ->label('Novel')
-                            ->content(fn(EditorChoice $record): string => $record->novel->title),
-
-                        Forms\Components\Placeholder::make('editor_name')
-                            ->label('Diajukan Oleh Editor')
-                            ->content(fn(EditorChoice $record): string => $record->editor->name),
-
-                        Forms\Components\Textarea::make('editor_notes')
-                            ->disabled()
-                            ->label('Analisis & Alasan Editor'),
-
-                        Forms\Components\Textarea::make('admin_notes')
-                            ->label('Catatan Admin (Opsional)')
-                            ->placeholder('Masukkan alasan jika Anda menolak pengajuan ini...'),
-                    ])->columns(1),
-            ]);
+        // 🌟 FIX: Dikosongkan karena form sudah dimatikan di EditEditorChoice.php 
+        // Halaman edit murni menjadi halaman "Review Kasus"
+        return $form->schema([]);
     }
 
     public static function table(Table $table): Table
@@ -51,7 +31,7 @@ class EditorChoiceResource extends Resource
         return $table
             ->modifyQueryUsing(fn(Builder $query) => $query->withoutGlobalScopes([
                 SoftDeletingScope::class,
-            ])->with(['novel', 'editor'])) // 🌟 Tambahkan with() di sini
+            ])->with(['novel', 'editor']))
             ->columns([
                 Tables\Columns\TextColumn::make('novel.title')
                     ->searchable()
@@ -83,31 +63,9 @@ class EditorChoiceResource extends Resource
                     ]),
             ])
             ->actions([
-                // TOMBOL APPROVE (SETUJUI TAYANG)
-                Action::make('approve_nomination')
-                    ->label('Setujui')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn(EditorChoice $record) => $record->status === 'pending')
-                    ->action(fn(EditorChoice $record) => $record->update(['status' => 'approved'])),
-
-                // TOMBOL REJECT (TOLAK TAYANG)
-                Action::make('reject_nomination')
-                    ->label('Tolak')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->visible(fn(EditorChoice $record) => $record->status === 'pending')
-                    ->form([
-                        Forms\Components\Textarea::make('admin_notes')
-                            ->required()
-                            ->label('Alasan Penolakan'),
-                    ])
-                    ->action(fn(EditorChoice $record, array $data) => $record->update([
-                        'status' => 'rejected',
-                        'admin_notes' => $data['admin_notes']
-                    ])),
-
-                Tables\Actions\EditAction::make()->label('Detail'),
+                // 🌟 FIX: Tombol Setujui dan Tolak dihapus dari tabel! 
+                // Logika eksekusinya sudah aman tersimpan di Header Actions halaman Edit.
+                Tables\Actions\EditAction::make()->label('Review & Eksekusi'),
             ]);
     }
 
@@ -115,6 +73,7 @@ class EditorChoiceResource extends Resource
     {
         return [
             'index' => Pages\ListEditorChoices::route('/'),
+            // EditAction akan mengarah ke sini, di mana tombol Setujui/Tolak berada
             'edit' => Pages\EditEditorChoice::route('/{record}/edit'),
         ];
     }

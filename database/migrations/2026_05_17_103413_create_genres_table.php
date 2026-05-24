@@ -8,25 +8,36 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Tabel Master Genre (Fantasi, Perkotaan, Horor, dll)
         Schema::create('genres', function (Blueprint $table) {
             $table->id();
-            // Tambahkan baris ini di bawah id()
-            $table->foreignId('parent_id')->nullable()->constrained('genres')->cascadeOnDelete();
+
+            // [FIX] cascadeOnDelete → nullOnDelete agar sub-genre tidak ikut terhapus
+            // ketika genre induk dihapus (mencegah kehilangan data tidak disengaja)
+            $table->foreignId('parent_id')
+                ->nullable()
+                ->constrained('genres')
+                ->nullOnDelete();
 
             $table->string('name')->unique();
             $table->string('slug')->unique();
             $table->timestamps();
         });
 
-        // Tabel Pivot untuk Relasi Many-to-Many (Novel bisa punya banyak genre)
         Schema::create('novel_genre', function (Blueprint $table) {
             $table->id();
-            $table->foreignUlid('novel_id')->constrained('novels')->cascadeOnDelete();
-            $table->foreignId('genre_id')->constrained('genres')->cascadeOnDelete();
 
-            // Mencegah duplikasi genre pada novel yang sama
+            $table->foreignUlid('novel_id')
+                ->constrained('novels')
+                ->cascadeOnDelete();
+
+            $table->foreignId('genre_id')
+                ->constrained('genres')
+                ->cascadeOnDelete();
+
             $table->unique(['novel_id', 'genre_id']);
+
+            // [FIX] Tambah created_at untuk audit "kapan genre ini ditambahkan ke novel"
+            $table->timestamp('created_at')->nullable();
         });
     }
 

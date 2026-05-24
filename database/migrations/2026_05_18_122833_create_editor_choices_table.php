@@ -11,26 +11,35 @@ return new class extends Migration
         Schema::create('editor_choices', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            // Relasi ke novel yang dinominasikan
-            $table->foreignUlid('novel_id')->constrained('novels')->cascadeOnDelete();
+            $table->foreignUlid('novel_id')
+                ->constrained('novels')
+                ->cascadeOnDelete();
 
-            // Relasi ke Editor yang mengajukan nominasi
-            $table->foreignId('editor_id')->constrained('users')->cascadeOnDelete();
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('editor_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
 
-            // Alasan analisis dari editor (misal: data retensi, kualitas plot)
             $table->text('editor_notes');
 
-            // Status persetujuan dari Admin
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending')->index();
+            $table->enum('status', ['pending', 'approved', 'rejected'])
+                ->default('pending')
+                ->index();
 
-            // Catatan umpan balik dari Admin (jika ditolak atau ada catatan tambahan)
             $table->text('admin_notes')->nullable();
 
             $table->softDeletes();
             $table->timestamps();
 
-            // Keamanan: Mencegah novel yang sama diajukan berkali-kali jika statusnya masih pending/approved
-            $table->unique(['novel_id', 'status'], 'unique_active_nomination');
+            // [FIX] Hapus unique(['novel_id', 'status']) — tidak bekerja sesuai harapan.
+            // Unique tersebut hanya mencegah kombinasi (novel, status) yang sama,
+            // artinya satu novel tetap bisa punya 1 baris 'pending' DAN 1 baris 'approved'
+            // sekaligus — yang seharusnya tidak boleh.
+            // Pencegahan dilakukan di application layer:
+            // "Jika novel sudah punya status pending/approved, tolak pengajuan baru"
+
+            // Index untuk query "apakah novel X sudah dinominasikan?"
+            $table->index(['novel_id', 'status']);
         });
     }
 

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
 
 class KeywordFilter extends Model
 {
@@ -12,6 +14,8 @@ class KeywordFilter extends Model
     protected $fillable = [
         'keyword',
         'replacement',
+        // [FIX] Tambah severity dari migrasi
+        'severity',
         'is_active',
         'created_by',
     ];
@@ -20,8 +24,26 @@ class KeywordFilter extends Model
         'is_active' => 'boolean',
     ];
 
-    public function creator()
+    // =========================================================
+    // RELASI
+    // =========================================================
+
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // =========================================================
+    // SCOPES
+    // =========================================================
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeHighSeverity(Builder $query): Builder
+    {
+        return $query->where('severity', 'high');
     }
 }

@@ -10,11 +10,25 @@ return new class extends Migration
     {
         Schema::create('banners', function (Blueprint $table) {
             $table->id();
+
             $table->string('title');
-            $table->string('image_path'); // Tempat menyimpan nama file gambar
-            $table->string('target_url')->nullable(); // URL tujuan saat gambar diklik
-            $table->boolean('is_active')->default(true)->index(); // Status tayang
-            $table->integer('sort_order')->default(0); // Untuk mengatur urutan slide
+            $table->string('image_path');
+            $table->string('target_url')->nullable();
+            $table->boolean('is_active')->default(true)->index();
+            $table->integer('sort_order')->default(0);
+
+            // [FIX] Tambah periode aktif agar banner bisa dijadwalkan otomatis
+            // is_active tetap dipertahankan untuk toggle manual override
+            $table->timestamp('start_date')->nullable();
+            $table->timestamp('end_date')->nullable();
+            $table->index(['start_date', 'end_date']);
+
+            // [FIX] Audit trail siapa yang membuat banner
+            $table->foreignUlid('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->timestamps();
         });
     }

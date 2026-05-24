@@ -69,7 +69,11 @@ class ParticipantsRelationManager extends RelationManager
                     ->modalHeading('Diskualifikasi Novel Ini?')
                     ->modalDescription('Novel ini akan dikeluarkan dari lomba (misal: karena melanggar tema).')
                     ->visible(fn(EventParticipant $record) => $record->status === 'approved')
-                    ->action(fn(EventParticipant $record) => $record->update(['status' => 'rejected'])),
+                    ->action(function (EventParticipant $record) {
+                        // 🌟 FIX: Hindari array update(), gunakan penugasan properti mutlak
+                        $record->status = 'rejected';
+                        $record->save();
+                    }),
 
                 // TOMBOL PULIHKAN (Jika Admin salah klik diskualifikasi)
                 Action::make('restore_participant')
@@ -77,7 +81,11 @@ class ParticipantsRelationManager extends RelationManager
                     ->icon('heroicon-o-arrow-path')
                     ->color('success')
                     ->visible(fn(EventParticipant $record) => $record->status === 'rejected')
-                    ->action(fn(EventParticipant $record) => $record->update(['status' => 'approved'])),
+                    ->action(function (EventParticipant $record) {
+                        // 🌟 FIX: Sama seperti di atas
+                        $record->status = 'approved';
+                        $record->save();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

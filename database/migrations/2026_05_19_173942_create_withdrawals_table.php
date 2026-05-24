@@ -10,26 +10,35 @@ return new class extends Migration
     {
         Schema::create('withdrawals', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete(); // Author yang menarik dana
 
-            // Logika Konversi: Mengonversi koin pendapatan menjadi Rupiah tunai
-            $table->unsignedInteger('coins_redeemed'); // Jumlah koin yang ditarik (Misal: 10000 koin)
-            $table->unsignedInteger('amount_rupiah');   // Uang asli yang dicairkan (Misal: Rp 1.000.000)
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('user_id')
+                ->constrained('users')
+                ->restrictOnDelete();
 
-            // Snapshot Rekening Bank saat penarikan diajukan (Menghindari masalah jika author ganti rekening di tengah jalan)
+            $table->unsignedInteger('coins_redeemed');
+            $table->unsignedInteger('amount_rupiah');
+
+            // Snapshot rekening bank saat pengajuan (anti-masalah ganti rekening di tengah proses)
+            // [SECURITY] bank_account_number dienkripsi di Model layer
+            // via $casts = ['bank_account_number' => 'encrypted']
             $table->string('bank_name');
             $table->string('bank_account_number');
             $table->string('bank_account_name');
 
-            // Bukti Audit Akuntansi
-            $table->string('proof_image')->nullable(); // Foto bukti transfer sukses dari Finance
-            $table->foreignId('processed_by')->nullable()->constrained('users'); // Staff Finance yang memproses
+            $table->string('proof_image')->nullable();
+
+            // [FIX] Tambah nullOnDelete agar tidak error jika staff finance dihapus
+            $table->foreignUlid('processed_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
 
             $table->enum('status', ['pending', 'approved', 'rejected'])
                 ->default('pending')
                 ->index();
 
-            $table->text('finance_notes')->nullable(); // Catatan jika ditolak (Misal: No. Rekening salah)
+            $table->text('finance_notes')->nullable();
             $table->timestamps();
         });
     }

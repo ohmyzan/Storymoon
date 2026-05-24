@@ -40,6 +40,17 @@ class KeywordFilterResource extends Resource
                             ->required()
                             ->placeholder('Contoh: *** atau (disensor)'),
 
+                        // 🌟 FIX DARI CLAUDE: Tambahkan field Severity yang hilang
+                        Forms\Components\Select::make('severity')
+                            ->options([
+                                'low' => 'Rendah (Misal: Umpatan ringan)',
+                                'medium' => 'Sedang (Misal: Kasar)',
+                                'high' => 'Tinggi (Misal: SARA/Pornografi)',
+                            ])
+                            ->default('medium')
+                            ->required()
+                            ->label('Tingkat Keparahan'),
+
                         Forms\Components\Toggle::make('is_active')
                             ->label('Aktifkan Sensor Ini')
                             ->default(true),

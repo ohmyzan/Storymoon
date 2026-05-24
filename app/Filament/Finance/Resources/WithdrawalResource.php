@@ -50,17 +50,20 @@ class WithdrawalResource extends Resource
                                 'rejected' => 'Ditolak / Gagal',
                             ])
                             ->required()
-                            ->label('Status Pencairan'),
+                            ->label('Status Pencairan')
+                            ->dehydrated(false), // 🌟 FIX!
 
                         Forms\Components\FileUpload::make('proof_image')
                             ->label('Upload Bukti Transfer')
                             ->directory('withdrawals/proofs')
-                            ->image(),
+                            ->image()
+                            ->dehydrated(false), // 🌟 FIX!
 
                         Forms\Components\Textarea::make('finance_notes')
                             ->label('Catatan Finance (Wajib diisi jika ditolak)')
                             ->placeholder('Contoh: Nomor rekening tidak ditemukan...')
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->dehydrated(false), // 🌟 FIX!
                     ])->color('success'),
             ]);
     }

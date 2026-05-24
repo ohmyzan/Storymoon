@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Filament\Admin\Resources; // Perhatikan namespacenya sekarang sangat clean!
+namespace App\Filament\Admin\Resources;
+
 use App\Filament\Admin\Resources\NovelResource\Pages;
 use App\Models\Novel;
 use Filament\Forms;
@@ -9,8 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope; // Wajib dipanggil untuk SoftDeletes
-use Filament\Tables\Actions\Action;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class NovelResource extends Resource
 {
@@ -23,9 +23,9 @@ class NovelResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('author_id')
-                    ->relationship('author', 'name', fn(Builder $query) => $query->role('Author')) // Secure: Hanya tampilkan user dengan role Author!
+                    ->relationship('author', 'name', fn(Builder $query) => $query->role('Author'))
                     ->required()
-                    ->searchable() // Scalable: Jika author ada ribuan, sistem tidak akan crash
+                    ->searchable()
                     ->label('Penulis'),
                 Forms\Components\TextInput::make('title')
                     ->required()
@@ -35,13 +35,19 @@ class NovelResource extends Resource
                     ->required()
                     ->columnSpanFull()
                     ->label('Sinopsis'),
-                Forms\Components\Select::make('status')
+
+                Forms\Components\Placeholder::make('status_display')
+                    ->label('Status Sistem')
+                    ->content(fn(?Novel $record) => $record ? strtoupper($record->status) : 'DRAFT'),
+
+                Forms\Components\Select::make('publish_status')
                     ->options([
-                        'bersambung' => 'Bersambung',
-                        'tamat' => 'Tamat',
+                        'ongoing' => 'Bersambung',
+                        'completed' => 'Tamat',
                     ])
-                    ->required()
-                    ->default('bersambung'),
+                    ->nullable()
+                    ->label('Status Publikasi Cerita')
+                    ->visible(fn(Forms\Get $get, ?Novel $record) => $record && $record->status === 'published'),
             ]);
     }
 
@@ -49,55 +55,30 @@ class NovelResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
-                    ->searchable()
-                    ->sortable()
-                    ->label('Judul Novel'),
-                Tables\Columns\TextColumn::make('author.name')
-                    ->searchable()
-                    ->sortable()
-                    ->label('Penulis'),
+                Tables\Columns\TextColumn::make('title')->searchable()->sortable()->label('Judul Novel'),
+                Tables\Columns\TextColumn::make('author.name')->searchable()->sortable()->label('Penulis'),
                 Tables\Columns\BadgeColumn::make('status')
-                    ->colors([
-                        'warning' => 'bersambung',
-                        'success' => 'tamat',
-                    ]),
-                Tables\Columns\TextColumn::make('total_chapters')
-                    ->sortable()
-                    ->label('Total Bab'),
-
+                    ->colors(['secondary' => 'draft', 'success' => 'published', 'danger' => 'frozen']),
+                Tables\Columns\TextColumn::make('total_chapters')->sortable()->label('Total Bab'),
                 Tables\Columns\IconColumn::make('is_frozen')
+                    ->getStateUsing(fn(Novel $record) => $record->isFrozen())
                     ->boolean()
                     ->trueIcon('heroicon-o-no-symbol')
                     ->falseIcon('heroicon-o-check-circle')
                     ->trueColor('danger')
                     ->falseColor('success')
                     ->label('Dibekukan'),
-
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make(), // Fitur Keamanan: Admin bisa melihat dan merestore data yang dihapus!
+                Tables\Filters\TrashedFilter::make(),
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'bersambung' => 'Bersambung',
-                        'tamat' => 'Tamat',
-                    ]),
+                    ->options(['draft' => 'Draft', 'published' => 'Published', 'frozen' => 'Dibekukan']),
+                Tables\Filters\SelectFilter::make('publish_status')
+                    ->options(['ongoing' => 'Bersambung', 'completed' => 'Tamat']),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(), // Cukup sisakan satu di paling atas
-
-                // TOMBOL FREEZE NOVEL
-                Action::make('freeze')
-                    ->label(fn(Novel $record) => $record->is_frozen ? 'Unfreeze' : 'Freeze')
-                    ->icon(fn(Novel $record) => $record->is_frozen ? 'heroicon-o-check-circle' : 'heroicon-o-no-symbol')
-                    ->color(fn(Novel $record) => $record->is_frozen ? 'success' : 'danger')
-                    ->requiresConfirmation()
-                    ->modalHeading(fn(Novel $record) => $record->is_frozen ? 'Buka Pembekuan Novel?' : 'Bekukan Novel Ini?')
-                    ->modalDescription('Novel yang dibekukan tidak akan bisa dibaca oleh Reader.')
-                    ->action(function (Novel $record) {
-                        $record->update(['is_frozen' => !$record->is_frozen]);
-                    }),
-
+                // 🌟 FIX: Tombol Freeze dihapus dari sini. Logikanya ada di EditNovel.php
+                Tables\Actions\EditAction::make()->label('Detail & Eksekusi'),
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\RestoreAction::make(),
             ])
@@ -112,7 +93,6 @@ class NovelResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // Tambahkan "NovelResource\" agar PHP tahu jalurnya dengan benar
             NovelResource\RelationManagers\ChaptersRelationManager::class,
         ];
     }
@@ -126,12 +106,8 @@ class NovelResource extends Resource
         ];
     }
 
-    // WAJIB DITAMBAHKAN AGAR SOFTDELETES BERFUNGSI DI FILAMENT
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
+        return parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 }

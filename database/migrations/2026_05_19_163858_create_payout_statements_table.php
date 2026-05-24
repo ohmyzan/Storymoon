@@ -11,24 +11,32 @@ return new class extends Migration
         Schema::create('payout_statements', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            $table->foreignId('author_id')->constrained('users')->restrictOnDelete();
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('author_id')
+                ->constrained('users')
+                ->restrictOnDelete();
 
-            // Periode Slip (Misal: Bulan 5, Tahun 2026)
-            $table->integer('month');
-            $table->integer('year');
+            $table->unsignedSmallInteger('month'); // 1-12
+            $table->unsignedSmallInteger('year');  // Misal: 2026
 
-            // Detail Transparansi Angka
-            $table->integer('total_gross_coins')->default(0); // Total koin kotor
-            $table->integer('platform_fee_coins')->default(0); // Potongan platform
-            $table->integer('tax_coins')->default(0); // Persiapan jika nanti kena pajak
-            $table->integer('net_author_coins')->default(0); // Koin bersih yang masuk dompet
+            $table->unsignedInteger('total_gross_coins')->default(0);
+            $table->unsignedInteger('platform_fee_coins')->default(0);
+            $table->unsignedInteger('tax_coins')->default(0);
+            $table->unsignedInteger('net_author_coins')->default(0);
 
-            // Status Slip
-            $table->enum('status', ['calculated', 'credited_to_wallet'])->default('calculated');
+            // [FIX] Perluas status enum untuk menangani kegagalan proses kredit
+            $table->enum('status', [
+                'calculated',        // Slip sudah dihitung
+                'pending_approval',  // Menunggu persetujuan finance
+                'credited_to_wallet', // Koin sudah masuk wallet
+                'failed',            // Proses kredit gagal — perlu retry
+            ])->default('calculated');
+
+            // [FIX] Timestamp untuk audit kapan tepatnya koin dikreditkan
+            $table->timestamp('credited_at')->nullable();
 
             $table->timestamps();
 
-            // Mencegah sistem membuat 2 slip untuk bulan dan author yang sama
             $table->unique(['author_id', 'month', 'year']);
         });
     }

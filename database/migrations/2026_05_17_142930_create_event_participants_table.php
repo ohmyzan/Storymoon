@@ -11,15 +11,29 @@ return new class extends Migration
         Schema::create('event_participants', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            $table->foreignUlid('event_id')->constrained('events')->cascadeOnDelete();
-            $table->foreignUlid('novel_id')->constrained('novels')->cascadeOnDelete();
+            $table->foreignUlid('event_id')
+                ->constrained('events')
+                ->cascadeOnDelete();
 
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending')->index();
+            $table->foreignUlid('novel_id')
+                ->constrained('novels')
+                ->cascadeOnDelete();
+
+            $table->enum('status', ['pending', 'approved', 'rejected'])
+                ->default('pending')
+                ->index();
+
+            // [FIX] Rekam jejak siapa yang mereview peserta event
+            $table->foreignUlid('reviewed_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->text('reviewer_notes')->nullable();
 
             $table->softDeletes();
             $table->timestamps();
 
-            // Satu novel hanya boleh mendaftar satu kali di event yang sama
             $table->unique(['event_id', 'novel_id']);
         });
     }

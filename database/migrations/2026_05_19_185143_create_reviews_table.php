@@ -10,11 +10,25 @@ return new class extends Migration
     {
         Schema::create('reviews', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignUlid('novel_id')->constrained('novels')->cascadeOnDelete();
-            $table->tinyInteger('rating'); // Bintang 1 sampai 5
-            $table->text('content'); // Isi ulasan
+
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('user_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
+
+            $table->foreignUlid('novel_id')
+                ->constrained('novels')
+                ->cascadeOnDelete();
+
+            // [FIX] unsignedTinyInteger agar tidak bisa diisi nilai negatif atau nol
+            // Validasi range 1-5 dilakukan di Model/FormRequest layer
+            $table->unsignedTinyInteger('rating');
+
+            $table->text('content');
+
+            $table->softDeletes();
             $table->timestamps();
+
             $table->unique(['user_id', 'novel_id']);
         });
     }

@@ -7,47 +7,46 @@ use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Model;
 
 class EditTextReview extends EditRecord
 {
     protected static string $resource = TextReviewResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            // Hapus DeleteAction untuk menjaga rekam jejak
-        ];
-    }
+    // 🌟 FIX: Jangan gunakan mutateFormDataBeforeSave untuk mengubah status yang sudah dilarang di $fillable.
+    // Kita tangkap secara manual dan eksekusi via method Model di afterSave.
+
+    public ?string $newStatus = null;
+    public ?string $editorNotes = null;
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // 🌟 LOGIKA PROGRESSIVE ONBOARDING
-        if ($data['status'] === 'approved') {
-
-            // Catat siapa editor yang bertanggung jawab meloloskan naskah ini
-            $data['editor_id'] = Auth::id();
-
-            // Jika Eksklusif: Lempar ke penulis untuk isi form KTP
-            if ($this->record->contract_type === 'exclusive') {
-                $data['status'] = 'kyc_submission';
-            }
-            // Jika Non-Eksklusif: Langsung Sah & Aktif tanpa KTP!
-            else {
-                $data['status'] = 'active';
-                $data['signed_at'] = now();
-            }
-        }
+        // Tangkap data dari form, jangan dikembalikan ke array save default
+        $this->newStatus = $data['status'] ?? null;
+        $this->editorNotes = $data['editor_notes'] ?? null;
 
         return $data;
     }
 
     protected function afterSave(): void
     {
-        // Jika kontrak berjalan (baik lanjut ke KYC maupun langsung Aktif), 
-        // ikat Editor ini ke Novel tersebut sebagai Supervisor selamanya.
-        if (in_array($this->record->status, ['kyc_submission', 'active'])) {
-            DB::transaction(function () {
-                $this->record->novel->update([
+        $contract = $this->record;
+
+        // Eksekusi logika status
+        if ($this->newStatus) {
+            if ($this->newStatus === 'approved') {
+                $statusToAdvance = ($contract->contract_type === 'exclusive') ? 'kyc_submission' : 'active';
+                $contract->advanceTo($statusToAdvance, $this->editorNotes);
+            } else {
+                // Untuk revision_needed atau rejected
+                $contract->advanceTo($this->newStatus, $this->editorNotes);
+            }
+        }
+
+        // Jika kontrak berjalan, ikat Editor ini ke Novel
+        if (in_array($contract->status, ['kyc_submission', 'active'])) {
+            DB::transaction(function () use ($contract) {
+                $contract->novel->update([
                     'editor_id' => Auth::id(),
                 ]);
             });

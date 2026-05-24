@@ -2,6 +2,7 @@
 
 namespace App\Filament\SuperAdmin\Pages;
 
+use App\Services\Google2FAService; // 🌟 Panggil Service Kita
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -9,28 +10,23 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
-use PragmaRX\Google2FA\Google2FA;
 
 class Verify2FA extends Page implements HasForms
 {
     use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
-
     protected static ?string $slug = 'verify-2fa';
-
-    // Blade view
     protected static string $view = 'filament.super-admin.pages.verify2fa';
-
-    // Sembunyikan dari sidebar
     protected static bool $shouldRegisterNavigation = false;
 
     public ?string $otp = '';
 
     public function mount(): void
     {
-        // Jika sudah lolos 2FA
-        if (session()->get('2fa_verified')) {
+        $session = app('session');
+
+        if ($session->get('2fa_verified')) {
             redirect()->to('/super-admin');
         }
     }
@@ -55,28 +51,15 @@ class Verify2FA extends Page implements HasForms
         /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
-        // Safety check
         if (! $user) {
-
-            Notification::make()
-                ->title('Session login tidak ditemukan.')
-                ->danger()
-                ->send();
-
+            Notification::make()->title('Session login tidak ditemukan.')->danger()->send();
             return redirect('/login');
         }
 
-        $google2fa = app(Google2FA::class);
+        $isValid = app(Google2FAService::class)->verifyOtp($user->google2fa_secret, $this->otp);
 
-        // Verifikasi OTP
-        $valid = $google2fa->verifyKey(
-            $user->google2fa_secret,
-            $this->otp
-        );
-
-        if ($valid) {
-
-            session()->put('2fa_verified', true);
+        if ($isValid) {
+            app('session')->put('2fa_verified', true);
 
             Notification::make()
                 ->title('Akses Diberikan!')

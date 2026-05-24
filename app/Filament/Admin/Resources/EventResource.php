@@ -53,26 +53,22 @@ class EventResource extends Resource
                             ->label('Banner Lomba'),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Jadwal & Status')
+                Forms\Components\Section::make('Jadwal Pelaksanaan')
                     ->schema([
                         Forms\Components\DateTimePicker::make('start_date')
                             ->required()
                             ->label('Tanggal Mulai'),
 
+                        // [FIX] Tambahan minDate agar UI kalender tidak bisa memilih hari sebelum start_date
                         Forms\Components\DateTimePicker::make('end_date')
                             ->required()
                             ->after('start_date')
+                            ->minDate(fn(Forms\Get $get) => $get('start_date'))
                             ->label('Tanggal Selesai'),
 
-                        Forms\Components\Select::make('status')
-                            ->options([
-                                'draft' => 'Draft',
-                                'active' => 'Aktif',
-                                'completed' => 'Selesai',
-                            ])
-                            ->required()
-                            ->default('draft'),
-                    ])->columns(3),
+                        // [FIX] Hapus Select 'status' dari sini karena status dihapus dari $fillable Model.
+                        // Pengubahan status sekarang dilakukan via Action Button di Tabel.
+                    ])->columns(2),
             ]);
     }
 
@@ -112,6 +108,19 @@ class EventResource extends Resource
                     ]),
             ])
             ->actions([
+                // [FIX] Action baru untuk mengubah status karena form biasa ditutup
+                Tables\Actions\Action::make('publish')
+                    ->label('Aktifkan Lomba')
+                    ->icon('heroicon-o-megaphone')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn(Event $record) => $record->status === 'draft')
+                    ->action(function (Event $record) {
+                        // Tidak menggunakan update() array agar aman dari blokir fillable
+                        $record->status = 'active';
+                        $record->save();
+                    }),
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\RestoreAction::make(),
@@ -121,7 +130,6 @@ class EventResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // Tambahkan baris ini
             RelationManagers\ParticipantsRelationManager::class,
         ];
     }

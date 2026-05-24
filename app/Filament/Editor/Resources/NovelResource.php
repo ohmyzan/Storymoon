@@ -55,26 +55,29 @@ class NovelResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make()->label('Bina Metadata'),
 
-                // TOMBOL VALIDASI OTOMATIS: AJUKAN PILIHAN EDITOR (Sesuai ide cerdas Anda!)
                 Action::make('nominate_editors_choice')
                     ->label('Ajukan Pilihan Editor')
                     ->icon('heroicon-o-hand-thumb-up')
                     ->color('star')
                     ->requiresConfirmation()
-                    // SYARAT VALIDASI: Tombol HANYA MUNCUL jika bab >= 30
-                    ->visible(fn(Novel $record) => $record->total_chapters >= 30)
+                    // 🌟 FIX DARI CLAUDE: Cegah SPAM! Cek apakah sudah pernah diajukan
+                    ->visible(
+                        fn(Novel $record) =>
+                        $record->total_chapters >= 30 &&
+                            !$record->editorChoices()->whereIn('status', ['pending', 'approved'])->exists()
+                    )
                     ->form([
                         Forms\Components\Textarea::make('editor_notes')
                             ->required()
                             ->label('Analisis Performa & Alasan Rekomendasi')
-                            ->placeholder('Tulis bukti data retensi atau kualitas cerita untuk meyakinkan Admin...'),
+                            ->placeholder('Tulis bukti data retensi...'),
                     ])
                     ->action(function (Novel $record, array $data) {
+                        // 🌟 FIX: Hapus 'status' => 'pending' dari array mass-assignment
                         EditorChoice::create([
                             'novel_id' => $record->id,
                             'editor_id' => Auth::id(),
                             'editor_notes' => $data['editor_notes'],
-                            'status' => 'pending',
                         ]);
                     }),
             ]);

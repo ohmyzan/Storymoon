@@ -10,22 +10,30 @@ return new class extends Migration
     {
         Schema::create('top_ups', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete(); // Pembaca yang top-up
 
-            // Kode unik transaksi dari sistem kita atau Payment Gateway
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('user_id')
+                ->constrained('users')
+                ->restrictOnDelete();
+
             $table->string('reference_id')->unique()->index();
 
-            // Aplikasi Aturan: 1 Koin = Rp 100
-            $table->unsignedInteger('amount_rupiah'); // Misal: 50000
-            $table->unsignedInteger('coins_granted');  // Otomatis terhitung: 500 koin
+            $table->unsignedInteger('amount_rupiah');
+            $table->unsignedInteger('coins_granted');
 
-            $table->string('payment_method')->nullable(); // Misal: GoPay, ShopeePay, BCA_VA
+            $table->string('payment_method')->nullable();
 
             $table->enum('status', ['pending', 'success', 'failed', 'expired'])
                 ->default('pending')
                 ->index();
 
-            $table->timestamp('settled_at')->nullable(); // Waktu pembayaran sukses diverifikasi
+            // [FIX] Composite index untuk reconciliation: semua top-up pending milik user X
+            $table->index(['user_id', 'status']);
+
+            // [FIX] Simpan payload callback dari payment gateway untuk debugging & audit fraud
+            $table->json('gateway_payload')->nullable();
+
+            $table->timestamp('settled_at')->nullable();
             $table->timestamps();
         });
     }

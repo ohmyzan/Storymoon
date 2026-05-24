@@ -17,7 +17,7 @@ class ReviewReportResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
     protected static ?string $navigationLabel = 'Eskalasi Ulasan';
     protected static ?string $modelLabel = 'Eskalasi Laporan Ulasan';
-    protected static ?string $navigationGroup = 'Manajemen Laporan'; // Mengelompokkan menu agar rapi
+    protected static ?string $navigationGroup = 'Manajemen Laporan';
 
     public static function form(Form $form): Form
     {
@@ -34,14 +34,15 @@ class ReviewReportResource extends Resource
                         Forms\Components\Placeholder::make('rating')
                             ->label('Rating Bintang')
                             ->content(fn(ReviewReport $record): string => ($record->review->rating ?? 0) . ' Bintang ⭐️'),
-                        Forms\Components\Textarea::make('review_content')
+
+                        // [FIX] Menggunakan Placeholder untuk teks statis
+                        Forms\Components\Placeholder::make('review_content')
                             ->label('Isi Ulasan Kontroversial')
                             ->content(fn(ReviewReport $record): string => $record->review->content ?? 'Content tidak ditemukan.')
-                            ->disabled()
                             ->columnSpanFull(),
-                        Forms\Components\Textarea::make('moderator_notes')
+                        Forms\Components\Placeholder::make('moderator_notes')
                             ->label('Alasan Lemparan Kasus dari Moderator')
-                            ->disabled()
+                            ->content(fn(ReviewReport $record): string => $record->moderator_notes ?? '-')
                             ->columnSpanFull(),
                     ])->columns(3),
 
@@ -73,9 +74,12 @@ class ReviewReportResource extends Resource
                     ->searchable()
                     ->color('danger')
                     ->weight('bold'),
-                Tables\Columns\TextColumn::make('review.novel->title')
+
+                // [FIX] Nama kolom tidak boleh mengandung tanda panah (->)
+                Tables\Columns\TextColumn::make('novel_title')
                     ->label('Novel')
                     ->getStateUsing(fn(ReviewReport $record): string => $record->review->novel->title ?? '-'),
+
                 Tables\Columns\BadgeColumn::make('reason')
                     ->colors(['danger' => 'review_bombing'])
                     ->label('Kategori'),
@@ -83,13 +87,11 @@ class ReviewReportResource extends Resource
                     ->dateTime('d M Y H:i')
                     ->label('Tanggal Eskalasi'),
             ])
-            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Eksekusi Kasus'),
             ]);
     }
 
-    // 🔒 PENTING: Filter otomatis agar Admin hanya melihat laporan berstatus 'escalated'
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->where('status', 'escalated');

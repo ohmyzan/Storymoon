@@ -3,8 +3,8 @@
 namespace App\Filament\Finance\Resources\WithdrawalResource\Pages;
 
 use App\Filament\Finance\Resources\WithdrawalResource;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model; // Tambahkan ini
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -12,23 +12,43 @@ class EditWithdrawal extends EditRecord
 {
     protected static string $resource = WithdrawalResource::class;
 
+    public ?string $newStatus = null;
+    public ?string $proofImage = null;
+    public ?string $financeNotes = null;
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $data['processed_by'] = Auth::id();
+        // Tangkap semua input non-fillable
+        $this->newStatus = $data['status'] ?? null;
+        $this->proofImage = $data['proof_image'] ?? null;
+        $this->financeNotes = $data['finance_notes'] ?? null;
+
         return $data;
     }
 
-    protected function afterSave(): void
+    // 🌟 FIX: Eksekusi Method Approve & Reject mutlak dari Model
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        // Logika Pengembalian Dana (Refund) jika penarikan ditolak
-        if ($this->record->status === 'rejected') {
+        $financeStaff = auth()->user();
 
-            DB::transaction(function () {
-                $user = $this->record->user;
+        // Cegah eksekusi ganda jika status sudah approved/rejected sebelumnya
+        if ($record->status === 'pending') {
 
-                // 🌟 PERBAIKAN: Kembalikan koin ke dompet (Wallet)
-                $user->wallet->increment('coin_balance', $this->record->coins_redeemed);
-            });
+            if ($this->newStatus === 'approved') {
+                // Eksekusi sukses (Bukti transfer diwajibkan oleh method)
+                $record->approve($financeStaff, $this->proofImage ?? '');
+            } elseif ($this->newStatus === 'rejected') {
+                // Eksekusi Refund
+                DB::transaction(function () use ($record, $financeStaff) {
+                    // 1. Kembalikan koin yang ditarik ke dompet
+                    $record->user->wallet->increment('coin_balance', $record->coins_redeemed);
+
+                    // 2. Tandai ditolak
+                    $record->reject($financeStaff, $this->financeNotes ?? '');
+                });
+            }
         }
+
+        return $record;
     }
 }

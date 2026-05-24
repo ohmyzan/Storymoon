@@ -28,14 +28,17 @@ class CommentReportResource extends Resource
                         Forms\Components\Placeholder::make('comment_author')
                             ->label('Terdakwa (Penulis Komentar)')
                             ->content(fn(CommentReport $record): string => $record->comment->user->name ?? 'User Dihapus'),
-                        Forms\Components\Textarea::make('comment_content')
+
+                        // [FIX] Textarea tidak mendukung content(), diganti menjadi Placeholder
+                        Forms\Components\Placeholder::make('comment_content')
                             ->label('Barang Bukti (Komentar Asli)')
                             ->content(fn(CommentReport $record): string => $record->comment->content ?? 'Komentar tidak ditemukan.')
-                            ->disabled()
                             ->columnSpanFull(),
-                        Forms\Components\Textarea::make('moderator_notes')
+
+                        // [FIX] Mengganti Textarea disabled menjadi Placeholder untuk teks statis
+                        Forms\Components\Placeholder::make('moderator_notes')
                             ->label('Catatan/Alasan Eskalasi dari Moderator')
-                            ->disabled()
+                            ->content(fn(CommentReport $record): string => $record->moderator_notes ?? '-')
                             ->columnSpanFull(),
                     ])->columns(1),
 
@@ -49,12 +52,11 @@ class CommentReportResource extends Resource
                             ->required()
                             ->label('Status Kasus'),
 
-                        // Fitur khusus Admin: Tombol Nuklir Ban Permanen
                         Forms\Components\Toggle::make('ban_user')
                             ->label('HUKUMAN MATI: Ban User Ini Secara Permanen')
                             ->helperText('Awas! Jika diaktifkan, akun pembuat komentar tidak akan bisa login selamanya.')
                             ->onColor('danger')
-                            ->dehydrated(false), // Tidak disimpan ke tabel comment_reports, kita tangkap di afterSave
+                            ->dehydrated(false),
                     ]),
             ]);
     }
@@ -76,15 +78,11 @@ class CommentReportResource extends Resource
                     ->limit(50),
                 Tables\Columns\TextColumn::make('created_at')->dateTime('d M Y H:i')->label('Waktu Lapor'),
             ])
-            ->filters([
-                // Kita tidak perlu filter status karena tabel ini otomatis difilter dari getEloquentQuery
-            ])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Sidang Tinggi'),
             ]);
     }
 
-    // 🔒 PENTING: Kunci pintu ruangan ini. Hanya tampilkan laporan yang dilempar (escalated) oleh Moderator!
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->where('status', 'escalated');
@@ -94,7 +92,6 @@ class CommentReportResource extends Resource
     {
         return [
             'index' => Pages\ListCommentReports::route('/'),
-            // Create dimatikan karena data murni berasal dari lemparan Moderator
             'edit' => Pages\EditCommentReport::route('/{record}/edit'),
         ];
     }

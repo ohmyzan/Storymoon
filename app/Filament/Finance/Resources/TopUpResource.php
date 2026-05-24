@@ -55,7 +55,8 @@ class TopUpResource extends Resource
                                 'expired' => 'Kedaluwarsa (Expired)',
                             ])
                             ->required()
-                            ->label('Status Transaksi'),
+                            ->label('Status Transaksi')
+                            ->dehydrated(false), // 🌟 FIX!
                         Forms\Components\DateTimePicker::make('settled_at')
                             ->label('Waktu Pembayaran Diverifikasi')
                             ->disabled(), // Hanya terisi otomatis saat status sukses

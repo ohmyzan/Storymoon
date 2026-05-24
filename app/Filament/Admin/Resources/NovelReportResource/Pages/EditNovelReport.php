@@ -9,16 +9,25 @@ class EditNovelReport extends EditRecord
 {
     protected static string $resource = NovelReportResource::class;
 
+    // 🌟 1. Siapkan penampung yang aman dari pembersihan (dehydration)
+    public bool $shouldTakedown = false;
+
+    // 🌟 2. Tangkap nilai toggle SEBELUM data dibuang
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (isset($data['takedown_novel']) && $data['takedown_novel'] === true) {
+            $this->shouldTakedown = true;
+        }
+        return $data;
+    }
+
     protected function afterSave(): void
     {
         $novel = $this->record->novel;
-        $isTakedown = $this->data['takedown_novel'] ?? false;
 
-        // 🌟 PERBAIKAN: Gunakan kolom is_frozen untuk membekukan novel
-        if ($isTakedown && $novel) {
-            $novel->update([
-                'is_frozen' => true,
-            ]);
+        if ($this->shouldTakedown && $novel) {
+            // [FIX] Menggunakan transitionTo sesuai arsitektur Model terbaru
+            $novel->transitionTo('frozen');
         }
     }
 }

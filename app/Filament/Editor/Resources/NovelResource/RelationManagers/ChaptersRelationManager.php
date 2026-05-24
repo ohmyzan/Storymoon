@@ -79,6 +79,12 @@ class ChaptersRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('title')
                     ->label('Judul Bab'),
 
+                // 🌟 FIX CLAUDE: Tambahkan kolom Word Count!
+                Tables\Columns\TextColumn::make('word_count')
+                    ->label('Jumlah Kata')
+                    ->suffix(' Kata')
+                    ->sortable(),
+
                 // INDIKATOR PREMIUM UNTUK EDITOR
                 Tables\Columns\IconColumn::make('is_premium')
                     ->boolean()

@@ -17,7 +17,7 @@ class NovelReportResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
     protected static ?string $navigationLabel = 'Eskalasi Novel';
     protected static ?string $modelLabel = 'Eskalasi Laporan Novel';
-    protected static ?string $navigationGroup = 'Manajemen Laporan'; // Mengelompokkan menu agar rapi
+    protected static ?string $navigationGroup = 'Manajemen Laporan';
 
     public static function form(Form $form): Form
     {
@@ -34,12 +34,16 @@ class NovelReportResource extends Resource
                         Forms\Components\Placeholder::make('reporter_name')
                             ->label('Dieskalasi Oleh (Editor)')
                             ->content(fn(NovelReport $record): string => $record->reporter->name ?? 'Sistem'),
-                        Forms\Components\Textarea::make('reason')
+
+                        // [FIX] reason adalah Enum/String pendek, gunakan TextInput bukan Textarea
+                        Forms\Components\TextInput::make('reason')
                             ->label('Kategori Pelanggaran Berat')
                             ->disabled(),
-                        Forms\Components\Textarea::make('description')
+
+                        // [FIX] Gunakan placeholder untuk teks yang tidak bisa diedit
+                        Forms\Components\Placeholder::make('description')
                             ->label('Barang Bukti / Catatan Editor')
-                            ->disabled()
+                            ->content(fn(NovelReport $record): string => $record->description ?? '-')
                             ->columnSpanFull(),
                     ])->columns(3),
 
@@ -57,7 +61,7 @@ class NovelReportResource extends Resource
                             ->label('TAKEDOWN: Turunkan Novel Ini dari Platform')
                             ->helperText('Jika diaktifkan, novel ini akan diubah statusnya menjadi Draft/Unpublished dan tidak bisa dibaca publik.')
                             ->onColor('danger')
-                            ->dehydrated(false), // Ditangkap manual di afterSave
+                            ->dehydrated(false),
                     ]),
             ]);
     }
@@ -65,7 +69,7 @@ class NovelReportResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn(Builder $query) => $query->with('novel.author')) // 🌟 Eager Load
+            ->modifyQueryUsing(fn(Builder $query) => $query->with('novel.author'))
             ->columns([
                 Tables\Columns\TextColumn::make('novel.title')
                     ->label('Novel Bermasalah')
@@ -81,13 +85,11 @@ class NovelReportResource extends Resource
                     ->dateTime('d M Y H:i')
                     ->label('Tanggal Eskalasi'),
             ])
-            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Sidang Hak Cipta'),
             ]);
     }
 
-    // 🔒 PENTING: Kunci pintu ruangan ini. Hanya tampilkan laporan yang dilempar (escalated) oleh Editor!
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->where('status', 'escalated');

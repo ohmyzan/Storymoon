@@ -11,18 +11,32 @@ return new class extends Migration
         Schema::create('review_reports', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            // Relasi Aktor & Konten
-            $table->foreignId('reporter_id')->constrained('users')->cascadeOnDelete(); // Siapa yang melapor
-            $table->foreignUlid('review_id')->constrained('reviews')->cascadeOnDelete(); // Ulasan mana yang dilaporkan (Asumsi tabel reviews sudah ada/akan dibuat)
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('reporter_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
 
-            // Detail Laporan
+            $table->foreignUlid('review_id')
+                ->constrained('reviews')
+                ->cascadeOnDelete();
+
             $table->enum('reason', ['hate_speech', 'review_bombing', 'harassment', 'spoiler', 'other']);
             $table->text('description')->nullable();
 
-            // Workflow Penanganan (Status Ekskalasi)
-            $table->enum('status', ['pending', 'resolved', 'rejected', 'escalated'])->default('pending')->index();
+            $table->enum('status', ['pending', 'resolved', 'rejected', 'escalated'])
+                ->default('pending')
+                ->index();
+
             $table->text('moderator_notes')->nullable();
-            $table->foreignId('handled_by')->nullable()->constrained('users'); // Moderator yang menangani
+
+            // [FIX] Tambah nullOnDelete agar tidak error jika moderator dihapus
+            $table->foreignUlid('handled_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            // [FIX] Unique constraint: satu user hanya bisa report review yang sama sekali
+            $table->unique(['reporter_id', 'review_id'], 'unique_report_per_user_review');
 
             $table->timestamps();
         });

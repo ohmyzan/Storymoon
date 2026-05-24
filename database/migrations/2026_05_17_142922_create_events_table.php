@@ -19,7 +19,18 @@ return new class extends Migration
             $table->dateTime('start_date');
             $table->dateTime('end_date');
 
-            $table->enum('status', ['draft', 'active', 'completed'])->default('draft')->index();
+            // [FIX] Composite index untuk query "event yang sedang aktif"
+            $table->index(['start_date', 'end_date']);
+
+            $table->enum('status', ['draft', 'active', 'completed'])
+                ->default('draft')
+                ->index();
+
+            // [FIX] Tambah created_by untuk audit trail siapa yang membuat event
+            $table->foreignUlid('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
 
             $table->softDeletes();
             $table->timestamps();

@@ -59,6 +59,7 @@ class ReviewReportResource extends Resource
 
                 Forms\Components\Section::make('Tindakan Moderator')
                     ->schema([
+                        // 🌟 FIX: Cegah mass assignment pada status
                         Forms\Components\Select::make('status')
                             ->options([
                                 'pending' => 'Menunggu Keputusan',
@@ -67,13 +68,16 @@ class ReviewReportResource extends Resource
                                 'escalated' => '🔥 Eskalasi ke Admin',
                             ])
                             ->required()
-                            ->label('Keputusan Eksekusi'),
+                            ->label('Keputusan Eksekusi')
+                            ->dehydrated(false),
 
+                        // 🌟 FIX: Cegah mass assignment pada notes
                         Forms\Components\Textarea::make('moderator_notes')
                             ->label('Catatan Moderator')
                             ->placeholder('Alasan penghapusan atau penolakan...')
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->dehydrated(false),
                     ])->color('warning'),
             ]);
     }

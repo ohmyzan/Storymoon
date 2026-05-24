@@ -4,42 +4,69 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Genre extends Model
 {
+    // [NOTE] Genre menggunakan BIGINT id (bukan ULID) — sudah benar sesuai migrasi
     use HasFactory;
 
-    // Keamanan: Hanya mengizinkan 3 kolom ini yang bisa diisi secara massal
     protected $fillable = [
         'parent_id',
         'name',
-        'slug'
+        'slug',
     ];
 
+    // =========================================================
+    // RELASI
+    // =========================================================
+
     /**
-     * Relasi untuk mendapatkan Sub-Genre (Anak)
-     * Satu Genre Utama bisa memiliki banyak Sub-Genre
+     * Sub-genre (anak) dari genre ini
      */
-    public function children()
+    public function children(): HasMany
     {
         return $this->hasMany(Genre::class, 'parent_id');
     }
 
     /**
-     * Relasi untuk mendapatkan Genre Utama (Induk)
-     * Sub-Genre ini milik satu Genre Utama tertentu
+     * Genre induk dari sub-genre ini
      */
-    public function parent()
+    public function parent(): BelongsTo
     {
         return $this->belongsTo(Genre::class, 'parent_id');
     }
 
     /**
-     * Relasi ke Novel
-     * Menggunakan tabel pivot 'novel_genre' sesuai migration yang kita buat di awal
+     * Novel yang memiliki genre ini
+     * [FIX] Tambah withTimestamps() untuk memanfaatkan created_at di pivot
      */
-    public function novels()
+    public function novels(): BelongsToMany
     {
-        return $this->belongsToMany(Novel::class, 'novel_genre');
+        return $this->belongsToMany(Novel::class, 'novel_genre')
+            ->withTimestamps(['created_at']);
+    }
+
+    // =========================================================
+    // SCOPES
+    // =========================================================
+
+    /**
+     * Hanya genre level atas (bukan sub-genre)
+     */
+    public function scopeParent(Builder $query): Builder
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    /**
+     * Hanya sub-genre (punya induk)
+     */
+    public function scopeChildren(Builder $query): Builder
+    {
+        return $query->whereNotNull('parent_id');
     }
 }

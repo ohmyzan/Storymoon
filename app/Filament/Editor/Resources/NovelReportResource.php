@@ -111,7 +111,9 @@ class NovelReportResource extends Resource
         return parent::getEloquentQuery()
             ->whereHas('novel', function (Builder $query) {
                 $query->where('editor_id', Auth::id());
-            });
+            })
+            // 🌟 FIX DARI CLAUDE: Sembunyikan laporan yang sudah selesai agar tidak nyampah
+            ->whereNotIn('status', ['resolved', 'rejected']);
     }
 
     public static function getPages(): array

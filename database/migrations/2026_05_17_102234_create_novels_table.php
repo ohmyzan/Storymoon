@@ -11,49 +11,44 @@ return new class extends Migration
         Schema::create('novels', function (Blueprint $table) {
             $table->ulid('id')->primary();
 
-            // Relasi ke tabel users sebagai author
-            $table->foreignId('author_id')
+            // [FIX] foreignId → foreignUlid karena users.id adalah ULID
+            $table->foreignUlid('author_id')
                 ->constrained('users')
                 ->cascadeOnDelete();
 
-            // Relasi ke editor (nullable karena novel bisa belum punya editor)
-            $table->foreignId('editor_id')
+            $table->foreignUlid('editor_id')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete();
 
             $table->string('title');
             $table->string('slug')->unique();
-
             $table->text('synopsis');
-
             $table->string('cover_image')->nullable();
 
-            // Status novel
-            // index() penting untuk filtering ranking/status
-            $table->enum('status', [
-                'bersambung',
-                'tamat'
-            ])
-                ->default('bersambung')
+            // [FIX] Pisah status utama dan status publikasi agar tidak ambigu
+            // status: kondisi novel secara keseluruhan
+            $table->enum('status', ['draft', 'published', 'frozen'])
+                ->default('draft')
                 ->index();
 
-            // Statistik cache untuk performa
+            // publish_status: sub-status saat novel sudah published
+            // null = belum published, ongoing = bersambung, completed = tamat
+            $table->enum('publish_status', ['ongoing', 'completed'])
+                ->nullable()
+                ->index();
+
+            // [FIX] Hapus is_frozen — sudah direpresentasikan oleh status = 'frozen'
+            // Cache counter untuk performa
             $table->unsignedInteger('views_count')->default(0);
             $table->unsignedInteger('favorites_count')->default(0);
             $table->unsignedInteger('total_chapters')->default(0);
 
             $table->decimal('rating', 3, 2)->default(0.00);
 
-            // Jika true, novel disembunyikan karena melanggar
-            $table->boolean('is_frozen')
-                ->default(false)
-                ->index();
-
-            // Soft delete untuk restore novel
             $table->softDeletes();
-
             $table->timestamps();
+            $table->timestamp('published_at')->nullable()->index();
         });
     }
 

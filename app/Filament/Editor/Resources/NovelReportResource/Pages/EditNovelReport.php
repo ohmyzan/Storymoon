@@ -3,19 +3,37 @@
 namespace App\Filament\Editor\Resources\NovelReportResource\Pages;
 
 use App\Filament\Editor\Resources\NovelReportResource;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
 
 class EditNovelReport extends EditRecord
 {
     protected static string $resource = NovelReportResource::class;
 
-    protected function mutateFormDataBeforeSave(array $data): array
+    // 🌟 FIX: Menangani logika 'escalated', 'resolved', 'rejected' 
+    // dengan memanggil method bawaan Model agar tidak terkena blokir $fillable
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        // Otomatis mencatat ID Editor yang sedang menangani laporan ini
-        $data['handled_by'] = Auth::id();
+        // Tangkap catatan editor
+        $notes = $data['editor_notes'] ?? '';
+        $user = auth()->user();
 
-        return $data;
+        // Eksekusi berdasarkan pilihan status
+        if ($data['status'] === 'escalated') {
+            $record->escalate($user, $notes);
+        } elseif ($data['status'] === 'resolved') {
+            $record->resolve($user, $notes);
+        } elseif ($data['status'] === 'rejected') {
+            $record->reject($user, $notes);
+        } else {
+            // Jika status = 'reviewed' atau 'pending'
+            $record->update([
+                'status' => $data['status'],
+                'editor_notes' => $notes,
+                'handled_by' => $user->id,
+            ]);
+        }
+
+        return $record;
     }
 }

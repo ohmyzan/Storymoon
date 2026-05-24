@@ -36,9 +36,19 @@ class BannerResource extends Resource
                         Forms\Components\FileUpload::make('image_path')
                             ->image()
                             ->required()
-                            ->directory('banners') // Gambar akan tersimpan di storage/app/public/banners
+                            ->directory('banners')
                             ->columnSpanFull()
                             ->label('Gambar Spanduk (Disarankan rasio lebar 3:1, cth: 1200x400px)'),
+
+                        // [FIX] Menambahkan field jadwal tayang dari migrasi baru
+                        Forms\Components\DateTimePicker::make('start_date')
+                            ->label('Tayang Mulai')
+                            ->nullable(),
+
+                        Forms\Components\DateTimePicker::make('end_date')
+                            ->label('Tayang Sampai')
+                            ->after('start_date') // Validasi bawaan Laravel
+                            ->nullable(),
 
                         Forms\Components\Toggle::make('is_active')
                             ->default(true)
@@ -61,6 +71,15 @@ class BannerResource extends Resource
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->label('Judul'),
+                // [FIX] Menampilkan jadwal di tabel
+                Tables\Columns\TextColumn::make('start_date')
+                    ->dateTime('d M Y')
+                    ->label('Mulai')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('end_date')
+                    ->dateTime('d M Y')
+                    ->label('Selesai')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('sort_order')
                     ->sortable()
                     ->label('Urutan'),
@@ -68,11 +87,8 @@ class BannerResource extends Resource
                     ->boolean()
                     ->label('Aktif'),
             ])
-            // Fitur reorder otomatis via drag-and-drop di Filament!
             ->reorderable('sort_order')
-            ->filters([
-                //
-            ])
+            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

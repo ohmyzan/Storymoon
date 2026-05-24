@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HomeController;
 
 // Rute Publik (Homepage, Detail Novel)
 Route::get('/', function () {
