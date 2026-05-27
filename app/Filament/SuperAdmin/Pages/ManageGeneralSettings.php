@@ -6,6 +6,7 @@ use App\Settings\GeneralSettings;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Pages\SettingsPage;
+use Illuminate\Support\Facades\Cache;
 
 class ManageGeneralSettings extends SettingsPage
 {
@@ -16,13 +17,88 @@ class ManageGeneralSettings extends SettingsPage
 
     protected static string $settings = GeneralSettings::class;
 
+    // ✅ Clear cache setiap kali settings disimpan
+    protected function afterSave(): void
+    {
+        Cache::put(
+            'general_settings',
+            app(GeneralSettings::class)->toArray(), // ✅ Hapus ->fresh()
+            now()->addDay()
+        );
+    }
+
     public function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Tabs::make('Pengaturan')
                     ->tabs([
-                        // ... [TAB 1 (Finansial), TAB 2 (Bonus), TAB 3 (Keamanan) biarkan SAMA PERSIS seperti milik Anda] ...
+
+                        // TAB 1: FINANSIAL
+                        Forms\Components\Tabs\Tab::make('Finansial')
+                            ->icon('heroicon-o-currency-dollar')
+                            ->schema([
+                                Forms\Components\TextInput::make('coin_price')
+                                    ->label('Harga per Koin (Rupiah)')
+                                    ->numeric()
+                                    ->required(),
+
+                                Forms\Components\TextInput::make('min_withdrawal')
+                                    ->label('Minimum Penarikan (Rupiah)')
+                                    ->numeric()
+                                    ->required(),
+
+                                Forms\Components\TextInput::make('revenue_share_exclusive')
+                                    ->label('Bagi Hasil Eksklusif (%)')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->required(),
+
+                                Forms\Components\TextInput::make('revenue_share_non_exclusive')
+                                    ->label('Bagi Hasil Non-Eksklusif (%)')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->required(),
+                            ])->columns(2),
+
+                        // TAB 2: BONUS BULANAN
+                        Forms\Components\Tabs\Tab::make('Bonus Bulanan')
+                            ->icon('heroicon-o-gift')
+                            ->schema([
+                                Forms\Components\TextInput::make('bonus_min_chapters')
+                                    ->label('Minimum Chapter untuk Bonus')
+                                    ->numeric()
+                                    ->required(),
+
+                                Forms\Components\TextInput::make('bonus_min_words')
+                                    ->label('Minimum Kata untuk Bonus')
+                                    ->numeric()
+                                    ->required(),
+                            ])->columns(2),
+
+                        Forms\Components\Tabs\Tab::make('Keamanan & Limitasi')
+                            ->icon('heroicon-o-shield-check')
+                            ->schema([
+                                Forms\Components\TextInput::make('max_daily_chapters')
+                                    ->label('Maksimal Chapter per Hari')
+                                    ->numeric()
+                                    ->required(),
+
+                                Forms\Components\Toggle::make('maintenance_mode')
+                                    ->label('Mode Maintenance')
+                                    ->helperText('Aktifkan untuk menutup akses publik sementara.')
+                                    ->columnSpanFull(),
+
+                                // ✅ Tambahkan ini
+                                Forms\Components\Textarea::make('maintenance_message')
+                                    ->label('Pesan Maintenance')
+                                    ->placeholder('Contoh: Server akan down 30 menit untuk update database.')
+                                    ->helperText('Pesan ini ditampilkan kepada user saat maintenance aktif.')
+                                    ->rows(3)
+                                    ->columnSpanFull(),
+                            ])->columns(2),
 
                         // TAB 4: UI & PENGUMUMAN
                         Forms\Components\Tabs\Tab::make('UI & Pengumuman')
@@ -36,7 +112,7 @@ class ManageGeneralSettings extends SettingsPage
                                     ->columnSpanFull(),
                             ]),
 
-                        // 🌟 FIX: TAB 5 WAJIB DITAMBAHKAN UNTUK KEBUTUHAN FRONTEND REACT KITA
+                        // TAB 5: IDENTITAS PUBLIK & SEO
                         Forms\Components\Tabs\Tab::make('Identitas Publik & SEO')
                             ->icon('heroicon-o-globe-alt')
                             ->schema([
@@ -61,6 +137,7 @@ class ManageGeneralSettings extends SettingsPage
                                     ->helperText('Maksimal 160 karakter agar optimal di mesin pencari.')
                                     ->columnSpanFull(),
                             ])->columns(2),
+
                     ])
                     ->columnSpanFull(),
             ]);

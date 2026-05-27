@@ -17,7 +17,7 @@ class Verify2FA extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
     protected static ?string $slug = 'verify-2fa';
-    protected static string $view = 'filament.super-admin.pages.verify2fa';
+    protected static string $view = 'filament.SuperAdmin.pages.verify2fa';
     protected static bool $shouldRegisterNavigation = false;
 
     public ?string $otp = '';
@@ -27,7 +27,7 @@ class Verify2FA extends Page implements HasForms
         $session = app('session');
 
         if ($session->get('2fa_verified')) {
-            redirect()->to('/super-admin');
+            redirect()->to('/SuperAdmin');
         }
     }
 
@@ -66,7 +66,7 @@ class Verify2FA extends Page implements HasForms
                 ->success()
                 ->send();
 
-            return redirect()->to('/super-admin');
+            return redirect()->to('/SuperAdmin');
         }
 
         Notification::make()

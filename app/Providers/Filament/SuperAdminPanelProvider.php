@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\Filament2FAMiddleware;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -17,7 +19,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin; // Tambahkan import ini di atas   
 
 class SuperAdminPanelProvider extends PanelProvider
 {
@@ -26,20 +27,35 @@ class SuperAdminPanelProvider extends PanelProvider
         return $panel
             ->id('super-admin')
             ->path('super-admin')
+
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->discoverResources(in: app_path('Filament/SuperAdmin/Resources'), for: 'App\\Filament\\SuperAdmin\\Resources')
-            ->discoverPages(in: app_path('Filament/SuperAdmin/Pages'), for: 'App\\Filament\\SuperAdmin\\Pages')
+
+            ->discoverResources(
+                in: app_path('Filament/SuperAdmin/Resources'),
+                for: 'App\\Filament\\SuperAdmin\\Resources'
+            )
+
+            ->discoverPages(
+                in: app_path('Filament/SuperAdmin/Pages'),
+                for: 'App\\Filament\\SuperAdmin\\Pages'
+            )
+
             ->pages([
                 Pages\Dashboard::class,
             ])
 
-            ->discoverWidgets(in: app_path('Filament/SuperAdmin/Widgets'), for: 'App\\Filament\\SuperAdmin\\Widgets')
+            ->discoverWidgets(
+                in: app_path('Filament/SuperAdmin/Widgets'),
+                for: 'App\\Filament\\SuperAdmin\\Widgets'
+            )
+
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
             ])
+
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -51,15 +67,16 @@ class SuperAdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+
             ->authMiddleware([
-                \Filament\Http\Middleware\Authenticate::class,
-                \App\Http\Middleware\Filament2FAMiddleware::class, // 🌟 Pasang satpam di sini!
+                Authenticate::class,
+
+                // 🌟 Middleware 2FA khusus panel Super Admin
+                Filament2FAMiddleware::class,
             ])
 
             ->plugins([
-                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make()
-            ]); // ✅ Titik komanya HANYA ada di bagian paling akhir ini
-
-
+                FilamentShieldPlugin::make(),
+            ]);
     }
 }

@@ -64,14 +64,14 @@ class LegalContractResource extends Resource
                             ])
                             ->required()
                             ->label('Keputusan Validasi Dokumen')
-                            ->dehydrated(false), // [FIX] Dicegat di afterSave untuk menggunakan method advanceTo()
+                            ->dehydrated(false),
 
                         Forms\Components\Textarea::make('editor_notes')
                             ->label('Catatan Penolakan (Wajib diisi jika ditolak)')
                             ->placeholder('Contoh: Foto KTP buram...')
-                            ->dehydrated(false) // [FIX] Sama seperti status
+                            ->dehydrated(false)
                             ->columnSpanFull(),
-                    ])->color('success'),
+                    ]),
             ]);
     }
 

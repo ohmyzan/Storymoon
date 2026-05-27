@@ -15,7 +15,7 @@ class ContractPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_contract');
+        return $user->can('view_any_text::review');
     }
 
     /**
@@ -23,7 +23,7 @@ class ContractPolicy
      */
     public function view(User $user, Contract $contract): bool
     {
-        return $user->can('view_contract');
+        return $user->can('view_text::review');
     }
 
     /**
@@ -31,7 +31,7 @@ class ContractPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_contract');
+        return $user->can('create_text::review');
     }
 
     /**
@@ -39,7 +39,7 @@ class ContractPolicy
      */
     public function update(User $user, Contract $contract): bool
     {
-        return $user->can('update_contract');
+        return $user->can('update_text::review');
     }
 
     /**
@@ -47,7 +47,7 @@ class ContractPolicy
      */
     public function delete(User $user, Contract $contract): bool
     {
-        return $user->can('delete_contract');
+        return $user->can('delete_text::review');
     }
 
     /**
@@ -55,7 +55,7 @@ class ContractPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_contract');
+        return $user->can('delete_any_text::review');
     }
 
     /**
@@ -63,7 +63,7 @@ class ContractPolicy
      */
     public function forceDelete(User $user, Contract $contract): bool
     {
-        return $user->can('force_delete_contract');
+        return $user->can('force_delete_text::review');
     }
 
     /**
@@ -71,7 +71,7 @@ class ContractPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_contract');
+        return $user->can('force_delete_any_text::review');
     }
 
     /**
@@ -79,7 +79,7 @@ class ContractPolicy
      */
     public function restore(User $user, Contract $contract): bool
     {
-        return $user->can('restore_contract');
+        return $user->can('restore_text::review');
     }
 
     /**
@@ -87,7 +87,7 @@ class ContractPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_contract');
+        return $user->can('restore_any_text::review');
     }
 
     /**
@@ -95,7 +95,7 @@ class ContractPolicy
      */
     public function replicate(User $user, Contract $contract): bool
     {
-        return $user->can('replicate_contract');
+        return $user->can('replicate_text::review');
     }
 
     /**
@@ -103,6 +103,6 @@ class ContractPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_contract');
+        return $user->can('reorder_text::review');
     }
 }

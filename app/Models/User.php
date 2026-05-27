@@ -64,17 +64,17 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(\Filament\Panel $panel): bool
     {
+        // SuperAdmin bisa akses semua panel tanpa perlu dicek per panel
         if ($this->hasRole('super_admin')) {
             return true;
         }
 
         return match ($panel->getId()) {
-            'admin'       => $this->hasRole('Admin'),
-            'editor'      => $this->hasRole('Editor') && $this->editor_verified_at !== null,
-            'moderator'   => $this->hasRole('Moderator'),
-            'finance'     => $this->hasRole('Finance'),
-            'super-admin' => $this->hasRole('super_admin'),
-            default       => false,
+            'admin'      => $this->hasRole('Admin'),
+            'editor'     => $this->hasRole('Editor') && $this->editor_verified_at !== null,
+            'moderator'  => $this->hasRole('Moderator'),
+            'finance'    => $this->hasRole('Finance'),
+            default      => false,
         };
     }
 

@@ -4,26 +4,20 @@ namespace App\Observers;
 
 use App\Models\User;
 use App\Models\Wallet;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class UserObserver
 {
     /**
-     * Menangani event "created" pada model User.
-     * Dipicu otomatis setelah user sukses mendaftar/dibuat.
+     * Setiap user baru dibuat → wallet otomatis dibuat.
+     * Tidak perlu ingat panggil Wallet::create() di mana pun.
      */
     public function created(User $user): void
     {
-        // Gembok proses dengan DB transaction demi keamanan tingkat tinggi
-        DB::transaction(function () use ($user) {
-            $user->wallet()->create([
-                'coin_balance' => 0,
-                'revenue_balance' => 0.00,
-            ]);
-        });
+        Wallet::create(['user_id' => $user->id]);
 
-        // Opsional: Catat log sistem untuk kebutuhan audit internal backend
-        Log::info("Dompet digital berhasil dibuat otomatis untuk User ID: {$user->id}");
+        Log::info('Wallet auto-created for new user.', [
+            'user_id' => $user->id,
+        ]);
     }
 }

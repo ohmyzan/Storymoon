@@ -17,12 +17,11 @@ class Filament2FAMiddleware
         // Jika user berhasil login dan dia adalah Super Admin
         if ($user && $user->hasRole('super_admin')) {
 
-            // Jika dia sudah mengaktifkan 2FA tapi belum verifikasi OTP
-            if ($user->google2fa_secret && ! session()->get('2fa_verified')) {
+            // 🔥 pastikan user tidak null di sini
+            if (!empty($user->google2fa_secret) && !session('2fa_verified')) {
 
-                // Hindari redirect loop
-                if (! $request->is('super-admin/verify-2fa')) {
-                    return redirect('super-admin/verify-2fa');
+                if (! $request->is('super_admin/verify-2fa')) {
+                    return redirect('super_admin/verify-2fa');
                 }
             }
         }

@@ -29,14 +29,14 @@ return new class extends Migration
             $table->unsignedTinyInteger('revenue_share_author');
             $table->unsignedTinyInteger('revenue_share_platform');
 
-            // KYC
-            $table->string('real_name');
-            $table->string('id_card_number');
+            // KYC — ubah semua kolom yang di-cast 'encrypted' menjadi text
+            $table->text('real_name');
+            $table->text('id_card_number');
             $table->string('id_card_image');
             $table->string('selfie_image')->nullable();
             $table->string('bank_name');
-            $table->string('bank_account_number');
-            $table->string('bank_account_name');
+            $table->text('bank_account_number');
+            $table->text('bank_account_name');
             $table->string('external_links')->nullable();
 
             $table->string('signature_image_path')->nullable();

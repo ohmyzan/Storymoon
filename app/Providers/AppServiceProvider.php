@@ -1,57 +1,36 @@
 <?php
 
-namespace App\Services;
+namespace App\Providers;
 
 use App\Models\User;
-use PragmaRX\Google2FA\Google2FA;
-use BaconQrCode\Renderer\Image\SvgImageBackEnd;
-use BaconQrCode\Renderer\ImageRenderer;
-use BaconQrCode\Renderer\RendererStyle\RendererStyle;
-use BaconQrCode\Writer;
+use App\Observers\UserObserver;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 
-class Google2FAService
+class AppServiceProvider extends ServiceProvider
 {
-    protected Google2FA $google2fa;
-
-    public function __construct(Google2FA $google2fa)
+    /**
+     * Register any application services.
+     */
+    public function register(): void
     {
-        $this->google2fa = $google2fa;
+        //
     }
 
     /**
-     * Menghasilkan Secret Key baru
+     * Bootstrap any application services.
      */
-    public function generateSecret(): string
+    public function boot(): void
     {
-        return $this->google2fa->generateSecretKey();
-    }
+        // 🛡️ GOD MODE:
+        // Super Admin otomatis bypass seluruh permission/policy
+        Gate::before(function (User $user, string $ability) {
+            return $user->hasRole('super_admin')
+                ? true
+                : null;
+        });
 
-    /**
-     * Menghasilkan gambar QR Code dalam format SVG
-     */
-    public function generateQrCodeSvg(User $user, string $secret): string
-    {
-        $qrCodeUrl = $this->google2fa->getQRCodeUrl(
-            config('app.name', 'Storymoon'),
-            $user->email,
-            $secret
-        );
-
-        $renderer = new ImageRenderer(
-            new RendererStyle(250),
-            new SvgImageBackEnd()
-        );
-
-        $writer = new Writer($renderer);
-
-        return $writer->writeString($qrCodeUrl);
-    }
-
-    /**
-     * Memvalidasi OTP
-     */
-    public function verifyOtp(string $secret, string $otp): bool
-    {
-        return $this->google2fa->verifyKey($secret, $otp);
+        // 👀 Observer User
+        User::observe(UserObserver::class);
     }
 }

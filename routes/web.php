@@ -3,11 +3,30 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
+use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
+use App\Support\SettingsCache; // ✅ Tambahkan ini
 
 // Rute Publik (Homepage, Detail Novel)
-Route::get('/', function () {
-    return view('welcome'); // Nanti diganti ke view homepage Storymoon
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::get('/maintenance', function () {
+    return Inertia::render('Maintenance');
+})->name('maintenance');
+
+// ✅ Endpoint status maintenance (DITAMBAHKAN DI SINI)
+Route::get('/api/status', function () {
+    $settings = SettingsCache::get();
+
+    return response()->json([
+        'maintenance' => $settings['maintenance_mode'] ?? false,
+    ]);
+})->name('status.check');
+
+Route::middleware(['throttle:60,1'])->group(function () {
+    Route::get('/api/genres/{slug}/novels', [HomeController::class, 'loadMoreNovels']);
+    Route::get('/api/editor-choices', [HomeController::class, 'getEditorChoices']);
+});
 
 Route::get('/dashboard', function () {
     return view('dashboard');

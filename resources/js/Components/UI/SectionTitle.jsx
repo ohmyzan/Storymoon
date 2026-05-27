@@ -14,20 +14,20 @@ export default function SectionTitle({
                 {title}
             </h2>
 
-            {/* Logika Tombol Kanan (Bisa Link 'Lihat Semua' atau Tombol 'Segarkan') */}
             {actionType === "refresh" ? (
                 <button
                     onClick={onRefresh}
-                    className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 transition"
+                    className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-800 transition"
                 >
                     <ArrowPathIcon className="w-4 h-4 mr-1" /> Segarkan
                 </button>
             ) : (
                 <Link
                     href={actionLink}
-                    className="flex items-center text-sm font-medium text-primary-500 hover:text-primary-600 transition"
+                    /* 🌟 FIX: Samakan warna dengan GenreShelf (primary-600) agar konsisten se-aplikasi */
+                    className="flex items-center text-sm md:text-base font-semibold text-primary-600 hover:text-primary-800 transition"
                 >
-                    Lihat Semua <ChevronRightIcon className="w-4 h-4 ml-1" />
+                    Lihat Semua <ChevronRightIcon className="w-5 h-5 ml-0.5" />
                 </Link>
             )}
         </div>

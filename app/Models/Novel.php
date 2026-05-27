@@ -76,7 +76,7 @@ class Novel extends Model
     public function genres(): BelongsToMany
     {
         return $this->belongsToMany(Genre::class, 'novel_genre')
-            ->withTimestamps(['created_at']);
+            ->withPivot('created_at');
     }
 
     public function reviews(): HasMany

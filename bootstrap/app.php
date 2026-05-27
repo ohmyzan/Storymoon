@@ -11,6 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // ✅ FIX: Daftarkan HandleInertiaRequests agar share() dieksekusi
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\CheckMaintenanceMode::class, // ← tambahkan ini
+        ]);
+
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,

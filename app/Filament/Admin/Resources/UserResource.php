@@ -44,7 +44,7 @@ class UserResource extends Resource
                             ->maxLength(255),
                         Forms\Components\Select::make('roles')
                             ->relationship('roles', 'name', function (Builder $query) {
-                                return $query->whereNotIn('name', ['super_admin', 'Finance']);
+                                return $query->whereNotIn('name', ['SuperAdmin', 'Finance']);
                             })
                             ->multiple()
                             ->preload()
@@ -105,7 +105,7 @@ class UserResource extends Resource
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([SoftDeletingScope::class])
             ->whereDoesntHave('roles', function ($q) {
-                $q->whereIn('name', ['super_admin', 'Finance']);
+                $q->whereIn('name', ['SuperAdmin', 'Finance']);
             })
             ->with('roles');
     }
